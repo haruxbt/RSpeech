@@ -5,6 +5,22 @@ import AVFoundation
 struct Voice: Decodable, Identifiable { let id: Int; let name: String }
 struct ReaderError: LocalizedError { var message: String; var errorDescription: String? { message } }
 
+// Resolve against the logged-in account, not the account used to build the app.
+func voicevoxModelRoot(home: URL) -> URL {
+    home.appendingPathComponent("Library/Application Support/RTranslate/Assets/voicevox", isDirectory: true)
+}
+func validateVoicevoxModels(at root: URL) throws {
+    let files = ["models/vvms/0.vvm", "models/vvms/1.vvm", "models/vvms/12.vvm"]
+    let dictionary = root.appendingPathComponent("dict")
+    let dictionaries = (try? FileManager.default.contentsOfDirectory(at: dictionary, includingPropertiesForKeys: nil)) ?? []
+    let hasDictionary = dictionaries.contains {
+        $0.lastPathComponent.hasPrefix("open_jtalk_dic") && FileManager.default.fileExists(atPath: $0.appendingPathComponent("sys.dic").path)
+    }
+    guard hasDictionary && files.allSatisfy({ FileManager.default.fileExists(atPath: root.appendingPathComponent($0).path) }) else {
+        throw ReaderError(message: "RTranslateのVOICEVOXデータが見つかりません。R翻訳で音声データを準備してください。\n参照先：\(root.path)")
+    }
+}
+
 func chunks(_ text: String) -> [String] {
     var result: [String] = [], current = ""
     for c in text {
@@ -51,13 +67,11 @@ final class Engine: @unchecked Sendable {
                     let config = try JSONSerialization.jsonObject(with: Data(contentsOf: configURL)) as! [String: String]
                     let resources = Bundle.main.resourceURL!
                     let python = resources.appendingPathComponent(config["python"]!).path
-                    let shared = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support/RTranslate/Assets/voicevox").path
-                    let sharedComplete = ["models/vvms/0.vvm", "models/vvms/1.vvm", "models/vvms/12.vvm", "dict"].allSatisfy { FileManager.default.fileExists(atPath: shared + "/" + $0) }
-                    let root = sharedComplete && !CommandLine.arguments.contains("--bundled-model-test") ? shared : resources.appendingPathComponent("voicevox").path
+                    let root = voicevoxModelRoot(home: FileManager.default.homeDirectoryForCurrentUser).path
                     let runtime = resources.appendingPathComponent(config["runtime"]!).path
-                    guard FileManager.default.isExecutableFile(atPath: python),
-                          FileManager.default.fileExists(atPath: root + "/models/vvms/0.vvm") else {
-                        throw ReaderError(message: "音声データが見つかりません。RSpeech.appをフォルダごとコピーし直してください。")
+                    try validateVoicevoxModels(at: URL(fileURLWithPath: root))
+                    guard FileManager.default.isExecutableFile(atPath: python) else {
+                        throw ReaderError(message: "音声実行環境が見つかりません。RSpeechを入れ直してください。")
                     }
                     let p = Process(), stdinPipe = Pipe(), stdoutPipe = Pipe()
                     p.executableURL = URL(fileURLWithPath: python)
@@ -324,7 +338,13 @@ if CommandLine.arguments.contains("--self-test") {
     precondition(parts.joined() == text)
     precondition(parts.allSatisfy { $0.count <= 180 })
     precondition(chunks(" \n\t").isEmpty)
-    print("Text chunk checks passed")
+    let airHome = URL(fileURLWithPath: "/test/home/AirUser")
+    precondition(voicevoxModelRoot(home: airHome).path == "/test/home/AirUser/Library/Application Support/RTranslate/Assets/voicevox")
+    do {
+        try validateVoicevoxModels(at: URL(fileURLWithPath: "/nonexistent-rspeech-test-voicevox"))
+        preconditionFailure("Missing shared data must fail, never use app data")
+    } catch { precondition(error.localizedDescription.contains("RTranslate")) }
+    print("Text chunk and shared-model path/error checks passed")
 } else if CommandLine.arguments.contains("--audio-self-test") {
     MainActor.assumeIsolated {
         Task { @MainActor in

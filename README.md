@@ -5,13 +5,13 @@ Safariで開いているページの本文を、VOICEVOXの同じ声で読み上
 
 ## ダウンロード
 
-**[最新版のダウンロード](https://github.com/haruxbt/RSpeech/releases/latest)** から `RSpeech-v1.1.0-macOS-arm64.zip` を取得してください。ソースコードのZIPではなく、Releases内のアプリ用ZIPを使います。
+**[最新版のダウンロード](https://github.com/haruxbt/RSpeech/releases/latest)** から `RSpeech-v1.1.1-macOS-arm64.zip` を取得してください。ソースコードのZIPではなく、Releases内のアプリ用ZIPを使います。
 
 1. ZIPを展開します。
 2. `RSpeech.app` を「アプリケーション」へコピーします。
 3. Safariで読みたいページを開き、RSpeechの **▶** を押します。
 
-Apple Silicon向けです。PythonやXcodeの別途インストールは不要です。アプリは仮署名・未公証です。初回起動でmacOSの確認が必要になる場合があります。
+Apple Silicon向けです。RTranslateでVOICEVOXデータを準備しておく必要があります。PythonやXcodeの別途インストールは不要です。アプリは仮署名・未公証です。初回起動でmacOSの確認が必要になる場合があります。
 
 ## 使い方
 
@@ -38,7 +38,7 @@ SafariでJavaScriptの実行が禁止されている場合は、Safariの設定 
 
 本文・URL・生成音声はメモリで扱い、保存・ログ出力・外部送信しません。音声合成用のHTTPサーバーも起動しません。声と速度の設定だけをこのMacに保存します。Safari自体による通常の閲覧通信は別です。
 
-そのMacにR翻訳の共有モデル `~/Library/Application Support/RTranslate/Assets/voicevox` が揃っていれば優先して再利用します。なければ、アプリに同梱した予備モデルを使います。R翻訳の設定やファイルは変更しません。
+ログイン中のユーザーのホームディレクトリから、`Library/Application Support/RTranslate/Assets/voicevox` の絶対パスを組み立て、RTranslateのモデル・辞書だけを使います。モデルや辞書はRSpeechに同梱しません。見つからない場合は準備を案内して停止します。RTranslateの設定やファイルは変更しません。
 
 音声を公開する場合は、[第三者ライセンス・声ごとの規約](THIRD_PARTY_NOTICES.md)とクレジット条件を確認してください。
 
@@ -57,7 +57,7 @@ python3 Tests/run_reader_checks.py
 npm install
 npm test
 dist/RSpeech.app/Contents/MacOS/RSpeech --self-test
-dist/RSpeech.app/Contents/MacOS/RSpeech --audio-self-test --bundled-model-test
+dist/RSpeech.app/Contents/MacOS/RSpeech --audio-self-test
 ```
 
 再生状態・URL切替・取得失敗・取得中の停止/ページ遷移、タイトル除外・段落順序などを検証します。

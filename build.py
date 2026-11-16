@@ -27,7 +27,7 @@ def copy_tree(source, target, ignore=None):
 
 seed = (args.seed_app or here / 'dist/RSpeech.app').resolve() / 'Contents/Resources'
 if resources != seed and seed.is_dir() and not (resources / 'Python').exists():
-    copy_tree(seed, resources, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+    copy_tree(seed, resources, ignore=shutil.ignore_patterns('voicevox', '__pycache__', '*.pyc'))
 
 python_source = rtranslate / 'dist/SafariPreview/RTranslate.app/Contents/Resources/Python'
 if not python_source.is_dir():
@@ -43,12 +43,13 @@ if not (resources / 'Python/bin/python3.13').is_file():
     for source in sorted(site.glob('voicevox_core*')):
         copy_tree(source, dest / source.name, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
 
-if not (resources / 'voicevox/models/vvms/0.vvm').is_file():
-    root = Path.home() / 'Library/Application Support/RTranslate/Assets/voicevox'
-    if not (root / 'models/vvms/0.vvm').is_file():
-        raise SystemExit('Application SupportのRTranslate/Assets/voicevoxがありません。R翻訳で音声データを準備してください。')
-    for name in ['dict', 'models']:
-        copy_tree(root / name, resources / 'voicevox' / name)
+# Models and dictionary belong only to RTranslate's Application Support folder.
+# Remove a model directory inherited from an older generated app before signing.
+old_models = resources / 'voicevox'
+if old_models.is_symlink():
+    old_models.unlink()
+elif old_models.exists():
+    shutil.rmtree(old_models)
 
 runtime_dir = resources / 'VoiceRuntime'
 runtime_dir.mkdir(exist_ok=True)
@@ -61,12 +62,13 @@ runtime = sorted(runtime_dir.glob('libvoicevox_onnxruntime*.dylib'))[0]
 license_source = rtranslate / 'Resources/VOICEVOX-LICENSE'
 if license_source.is_dir():
     copy_tree(license_source, resources / 'VOICEVOX-LICENSE')
+shutil.copy2(here / 'Design/RSpeech.icns', resources / 'RSpeech.icns')
 copy_tree(here / 'licenses', resources / 'licenses') if (here / 'licenses').is_dir() else None
 subprocess.run(['xcrun', 'swiftc', '-swift-version', '5', '-target', 'arm64-apple-macos14.0', '-file-prefix-map', str(here) + '=/RSpeech', '-O', str(here / 'Main.swift'), '-o', str(macos / 'RSpeech'), '-framework', 'AppKit', '-framework', 'SwiftUI', '-framework', 'AVFoundation'], check=True)
 shutil.copy2(here / 'worker.py', resources / 'worker.py')
 shutil.copy2(here / 'PageExtraction.js', resources / 'PageExtraction.js')
 (resources / 'runtime.json').write_text(json.dumps({'python': 'Python/bin/python3.13', 'runtime': str(runtime.relative_to(resources))}))
-info = {'CFBundleIdentifier': 'local.flop.RSpeech', 'CFBundleName': 'RSpeech', 'CFBundleDisplayName': 'RSpeech', 'CFBundleExecutable': 'RSpeech', 'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': '1.1.0', 'CFBundleVersion': '3', 'LSMinimumSystemVersion': '14.0', 'NSHighResolutionCapable': True, 'NSAppleEventsUsageDescription': 'Safariの現在のページの本文を取得して、端末内のVOICEVOXで読み上げます。'}
+info = {'CFBundleIdentifier': 'local.flop.RSpeech', 'CFBundleName': 'RSpeech', 'CFBundleDisplayName': 'RSpeech', 'CFBundleExecutable': 'RSpeech', 'CFBundlePackageType': 'APPL', 'CFBundleIconFile': 'RSpeech.icns', 'CFBundleShortVersionString': '1.1.1', 'CFBundleVersion': '4', 'LSMinimumSystemVersion': '14.0', 'NSHighResolutionCapable': True, 'NSAppleEventsUsageDescription': 'Safariの現在のページの本文を取得して、端末内のVOICEVOXで読み上げます。'}
 with (contents / 'Info.plist').open('wb') as f:
     plistlib.dump(info, f)
 # The standalone interpreter has no libpython dependency. Do not ship its unused
@@ -99,5 +101,7 @@ for attempt in range(3):
         break
 else:
     raise SystemExit(signed.stderr)
+assert not (resources / 'voicevox').exists()
+assert not list(resources.rglob('*.vvm'))
 subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
 print(app)
