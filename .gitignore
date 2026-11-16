@@ -1,0 +1,17 @@
+.DS_Store
+AGENTS.md
+VALIDATION.md
+.local/
+work/
+dist/
+node_modules/
+__pycache__/
+*.pyc
+*.log
+.env*
+*.key
+*.pem
+*.p12
+*.wav
+*.mp3
+*.mp4
