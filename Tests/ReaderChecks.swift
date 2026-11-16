@@ -162,6 +162,8 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
         while online.updating && Date() < deadline { try await Task.sleep(nanoseconds: 100_000_000) }
         precondition(online.commonEntries.count >= 789, online.commonStatus)
         precondition(online.commonEntries.contains(where: { $0.word == "Intent" && $0.reading == "インテント" }))
+        precondition(online.commonEntries.contains(where: { $0.word == "Attack Surface" && $0.reading == "アタックサーフェス" }))
+        precondition(online.commonEntries.contains(where: { $0.word == "Tor" && $0.reading == "トア" }))
         print("Live GitHub JSON fetch, validation and cache write passed")
     }
     print("Dictionary persistence/update/delete, non-cascading readings, playback overlap, live voice/speed/dictionary invalidation passed")

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "2026.11.16.1",
+  "version": "2026.11.16.2",
   "description": "IT・プログラミング・AI開発・セキュリティの読み。読みは編集方針による日本語表記、アクセント0は平板の初期値。個人辞書が優先。",
   "sources": [
     {
@@ -7996,6 +7996,446 @@
       "id": "9fdbbf6a-d22f-578f-8d81-f2677cdd6568",
       "word": "Lenovo",
       "reading": "レノボ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "2e09d3bf-aef5-5ffa-9d65-06ddd653c8e3",
+      "word": "Attack Surface",
+      "reading": "アタックサーフェス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "678984bd-a5a2-511f-a975-eb97fc1c778a",
+      "word": "Attack Surface Management",
+      "reading": "アタックサーフェスマネジメント",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "fb9a10f7-abb0-5c75-83c4-0b520d7c1a57",
+      "word": "Surface",
+      "reading": "サーフェス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "41cb72f0-b947-5949-bda8-ce5163cbd14f",
+      "word": "MITRE ATT&CK",
+      "reading": "マイターアタック",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "fe76e3ee-d846-5614-b0f7-6a35604d4b02",
+      "word": "MITRE Att@ck",
+      "reading": "マイターアタック",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "ed6e7cdb-5d0b-5b46-96cc-56bbdedca838",
+      "word": "ATT@CK",
+      "reading": "アタック",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "2e76d867-318f-5317-bec7-bd4743f69fa7",
+      "word": "Tor",
+      "reading": "トア",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "d11c90ab-c8f4-5435-b518-986470c39500",
+      "word": "Tor Browser",
+      "reading": "トアブラウザー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "690db8d1-03a9-50f2-a3d1-97b0d419137f",
+      "word": "Dark Web",
+      "reading": "ダークウェブ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "5cf0701c-97f6-5574-9e61-c579eaf925a5",
+      "word": "Darkweb",
+      "reading": "ダークウェブ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "a4c83277-1126-5395-ba35-66b40d0979bb",
+      "word": "Darknet",
+      "reading": "ダークネット",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "34aaf789-8112-527e-adaa-f9041a7c532f",
+      "word": "Deep Web",
+      "reading": "ディープウェブ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "0f668921-82ec-5d5d-b685-c16cb8e3a2e9",
+      "word": "Onion",
+      "reading": "オニオン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "dde5cc9e-54ad-5d2d-9df7-714f8ed64f1d",
+      "word": "Onion Routing",
+      "reading": "オニオンルーティング",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "c1d4a521-a116-5173-9e1f-b929b63e78f9",
+      "word": "EASM",
+      "reading": "イーエーエスエム",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "3ed14e73-0398-5887-a1fd-3abac47b3b01",
+      "word": "ASM",
+      "reading": "エーエスエム",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "security"
+      ]
+    },
+    {
+      "id": "e8bd3a6e-78f9-52ec-9cee-ae62c0828c96",
+      "word": "CTEM",
+      "reading": "シーティーイーエム",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "2d333a7f-4550-5d51-a96f-ffa92e8f0374",
+      "word": "Threat Hunting",
+      "reading": "スレットハンティング",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "9ad54274-defe-5082-9bc4-75e7ba8bec40",
+      "word": "Threat Intelligence",
+      "reading": "スレットインテリジェンス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "3751e03c-d377-5270-bb9d-3c104fc41dbc",
+      "word": "Kill Chain",
+      "reading": "キルチェーン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "625866e1-067c-5f47-89be-6922ccdd4c32",
+      "word": "Cyber Kill Chain",
+      "reading": "サイバーキルチェーン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "a82da794-3914-53bb-bec3-02c7c6beddfa",
+      "word": "Adversary",
+      "reading": "アドバーサリー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "f89bae75-3882-55eb-b94b-9d59ea2d621c",
+      "word": "Adversarial",
+      "reading": "アドバーサリアル",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "5ecbe6d8-8171-5a48-8dc4-3e7c1372a9c3",
+      "word": "Tactics",
+      "reading": "タクティクス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "18c526db-dece-5d68-85e6-09dacef1797f",
+      "word": "Techniques",
+      "reading": "テクニークス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "ff0e668d-05ad-502b-b38c-e30c21a7b5d2",
+      "word": "Procedures",
+      "reading": "プロシージャーズ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "c0bb6fcd-3c70-5c05-bd9c-51b31c65e682",
+      "word": "Command and Control",
+      "reading": "コマンドアンドコントロール",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "3e152b15-be71-5bfd-820e-f7454bc041b8",
+      "word": "C2",
+      "reading": "シーツー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "c7fe1744-6f63-5cd5-b7c8-8255aa248c07",
+      "word": "C&C",
+      "reading": "シーアンドシー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "20efe611-f91f-57f1-8d5e-5eecadcab7c8",
+      "word": "Lateral Movement",
+      "reading": "ラテラルムーブメント",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "0a6abfb1-0080-597a-8bb3-d7a9b1353bdb",
+      "word": "Privilege Escalation",
+      "reading": "プリビレッジエスカレーション",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "2f6daaca-6b47-5116-9a9b-73ed6efccd2b",
+      "word": "Persistence",
+      "reading": "パーシステンス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "f6f7d250-5b74-5349-af26-853b93f1ced0",
+      "word": "Exfiltration",
+      "reading": "エクスフィルトレーション",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "e5c96302-877f-5fd4-b7f0-0d2cdd250bc7",
+      "word": "Reconnaissance",
+      "reading": "リコネサンス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "fee1134e-5945-584e-a215-3bf9d0ab88d6",
+      "word": "Credential Stuffing",
+      "reading": "クレデンシャルスタッフィング",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "867f3ed2-2f37-5865-9ded-925f94381a8d",
+      "word": "Password Spraying",
+      "reading": "パスワードスプレーイング",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "4ad3f857-08f2-5c45-9fa4-23ffd3eac6a3",
+      "word": "Brute Force",
+      "reading": "ブルートフォース",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "9442b547-d02b-5deb-bebe-213989705fdc",
+      "word": "Kerberos",
+      "reading": "ケルベロス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "d10972e8-85b5-5219-8e02-0bb4fbdf299f",
+      "word": "NTLM",
+      "reading": "エヌティーエルエム",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "388154dc-c9d2-5902-ac88-9db15116dc6b",
+      "word": "LDAP",
+      "reading": "エルダップ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "dc974dbd-29c9-5986-bbfc-fdbc5786feaa",
+      "word": "Active Directory",
+      "reading": "アクティブディレクトリー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "83702f66-54d9-56d1-84f8-6adfeb81e534",
+      "word": "Zero Day",
+      "reading": "ゼロデイ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "4e71f848-b841-5817-b700-4fcb73033b54",
+      "word": "Zero-day",
+      "reading": "ゼロデイ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "f10ea59c-0cd2-59fb-8a5b-556fd2ce3c69",
+      "word": "Supply Chain",
+      "reading": "サプライチェーン",
       "accent": 0,
       "priority": 5,
       "sources": [

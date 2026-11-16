@@ -38,3 +38,7 @@ https://raw.githubusercontent.com/haruxbt/RSpeech/main/Dictionary/common-ja.json
 アプリは公開JSONの取得だけを行います。ページ・URL・個人の登録内容は送信しません。取得データを検証してから保存し、通信失敗・不正データ・旧版の場合は手元の辞書を保持します。
 
 RSpeech形式のJSON配列、およびVOICEVOX Engineが書き出すUUIDをキーとしたJSONから、文字・読み・アクセント・優先度を個人辞書へ取り込めます。品詞は一般名詞として扱います。書き出しはRSpeech形式の個人辞書です。VOICEVOX EngineのHTTPサーバーは必要ありません。
+
+## 2026.11.16.2
+
+共通辞書を833語へ更新しました。Attack Surface / MITRE ATT&CK / MITRE Att@ck / Tor / Dark Web / DoS / DDoSを含みます。Torは利用者指定の「トア」です。アプリ1.3.0は同梱初期版789語から起動時にこのJSONへ更新します。アプリの再インストールは不要です。
