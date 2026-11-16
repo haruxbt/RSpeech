@@ -17,9 +17,12 @@ actor FakeSafari: SafariSource {
     }
 }
 final class FakeSpeech: SpeechEngine, @unchecked Sendable {
+    let onRequest: @MainActor @Sendable (String, Int, Double) -> Void
+    init(onRequest: @escaping @MainActor @Sendable (String, Int, Double) -> Void = { _, _, _ in }) { self.onRequest = onRequest }
     func start() async throws -> [Voice] { [Voice(id: 2, name: "四国めたん")] }
     func close() {}
     func synthesize(_ text: String, speaker: Int, speed: Double) async throws -> Data {
+        await onRequest(text, speaker, speed)
         try await Task.sleep(nanoseconds: 150_000_000)
         // Two seconds of silence, used only in memory for playback state tests.
         var data = Data()
@@ -29,16 +32,41 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
         return data
     }
 }
-@MainActor func waitFor(_ condition: () -> Bool) async throws {
-    let deadline = Date().addingTimeInterval(4)
+@MainActor func waitFor(_ condition: () -> Bool, line: UInt = #line) async throws {
+    let deadline = Date().addingTimeInterval(8)
     while !condition() {
-        if Date() > deadline { throw ReaderError(message: "Timed out waiting for reader state") }
+        if Date() > deadline { throw ReaderError(message: "Timed out waiting for reader state at line \(line)") }
         try await Task.sleep(nanoseconds: 10_000_000)
     }
 }
 @MainActor func readerChecks() async throws {
+    let suite = "RSpeechChecks-" + UUID().uuidString
+    let preferences = UserDefaults(suiteName: suite)!
+    defer { preferences.removePersistentDomain(forName: suite) }
+    let dictionary = ReadingDictionary(defaults: preferences)
+    dictionary.word = "ARTEX"; dictionary.reading = "アルテックス"; dictionary.register()
+    precondition(dictionary.entries.count == 1)
+    precondition(ReadingDictionary(defaults: preferences).entries == dictionary.entries, "Dictionary must survive relaunch")
+    precondition(pronunciation("ARTEXとartex。SMARTEXはそのまま。", entries: dictionary.entries) == "アルテックスとアルテックス。SMARTEXはそのまま。")
+    precondition(pronunciation("ARTEX API", entries: [ReadingEntry(word: "ARTEX", reading: "API"), ReadingEntry(word: "API", reading: "エーピーアイ")]) == "API エーピーアイ", "Replacements must not cascade")
+    dictionary.word = "ARTEX"; dictionary.reading = "アルテクス"; dictionary.register()
+    precondition(dictionary.entries.count == 1 && dictionary.entries[0].reading == "アルテクス")
+    dictionary.remove(dictionary.entries[0]); precondition(ReadingDictionary(defaults: preferences).entries.isEmpty)
+    dictionary.word = "  "; dictionary.reading = "空白"; dictionary.register(); precondition(dictionary.entries.isEmpty)
+    precondition(englishWords("ARTEXとartex、LinuxやAPI。") == ["ARTEX", "Linux", "API"])
+    dictionary.checks = [WordCheck(word: "ARTEX", reading: "エエアアルティイイイエックス", isSpelling: true, desiredReading: "アルテックス"), WordCheck(word: "Linux", reading: "リナックス", isSpelling: false, desiredReading: "リナックス")]
+    dictionary.registerChecked()
+    precondition(dictionary.entries.count == 2)
+    precondition(ReadingDictionary(defaults: preferences).entries.count == 2)
+    let originalEntries = dictionary.entries
+    dictionary.checks = [WordCheck(word: "ARTEX", reading: "", isSpelling: true, desiredReading: "更新した読み"), WordCheck(word: "API", reading: "", isSpelling: true, desiredReading: String(repeating: "ア", count: 65))]
+    dictionary.registerChecked(); precondition(dictionary.entries == originalEntries, "Bulk registration must be atomic")
+    dictionary.edit(dictionary.entries.first(where: { $0.word == "ARTEX" })!)
+    dictionary.word = "Linux"; dictionary.reading = "誤更新"; dictionary.register()
+    precondition(dictionary.entries == originalEntries, "Editing into a duplicate must preserve both entries")
+    dictionary.reset()
     let source = FakeSafari()
-    let reader = Reader(safari: source, muted: true, makeEngine: { FakeSpeech() })
+    let reader = Reader(safari: source, muted: true, dictionary: dictionary, preferences: preferences, makeEngine: { FakeSpeech() })
     reader.toggle()
     try await waitFor { reader.busy && !reader.fetching }
     precondition(reader.text == "最初の本文です。")
@@ -72,6 +100,37 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     try await waitFor { !reader.fetching }
     precondition(reader.text.isEmpty && !reader.busy, "Navigation during extraction must not cache stale content")
     reader.stop()
+    // Observe the actual AVAudioPlayer state when the next synthesis starts.
+    let pipelineSource = FakeSafari()
+    let first = "最初の文章を読みながら次の音声を準備するための確認です。"
+    let second = "ARTEXを二番目の文章として読み上げるための確認です。"
+    let third = "最後の文章まで正しい順序で再生することを確認します。"
+    await pipelineSource.set("https://example.test/pipeline", first + second + third)
+    precondition(chunks(first + second + third).count == 3)
+    var active: Reader?
+    var requests: [(text: String, speaker: Int, speed: Double, duringPlayback: Bool)] = []
+    let spy = FakeSpeech { text, speaker, speed in requests.append((text, speaker, speed, active?.isAudioPlaying ?? false)) }
+    let pipeline = Reader(safari: pipelineSource, muted: true, dictionary: ReadingDictionary(defaults: preferences), preferences: preferences, makeEngine: { spy })
+    active = pipeline
+    pipeline.toggle()
+    try await waitFor { requests.count >= 2 }
+    precondition(requests[1].duringPlayback, "Next sentence must synthesize while the current sentence is playing")
+    precondition(pipeline.text == first + second + third)
+    pipeline.speaker = 3; pipeline.speed = 1.5
+    pipeline.dictionary.word = "ARTEX"; pipeline.dictionary.reading = "アルテックス"; pipeline.dictionary.register()
+    try await waitFor { requests.contains(where: { $0.text.contains("アルテックス") && $0.speaker == 3 && $0.speed == 1.5 }) }
+    precondition(pipeline.text.contains("ARTEX"), "Dictionary must not change displayed page text")
+    pipeline.toggle(); precondition(pipeline.paused)
+    pipeline.speaker = 8; pipeline.speed = 2
+    try await waitFor { requests.contains(where: { $0.text.contains("アルテックス") && $0.speaker == 8 && $0.speed == 2 }) }
+    pipeline.toggle()
+    try await waitFor { !pipeline.paused && !pipeline.fetching }
+    try await waitFor { requests.contains(where: { $0.text == third }) }
+    try await waitFor { !pipeline.busy }
+    precondition(preferences.integer(forKey: "speaker") == 8 && preferences.double(forKey: "speed") == 2)
+    pipeline.stop(); pipeline.speaker = 2; pipeline.speed = 1.2
+    precondition(!pipeline.busy)
+    print("Dictionary persistence/update/delete, non-cascading readings, playback overlap, live voice/speed/dictionary invalidation passed")
     print("Reader checks passed: one-button playback, preparation pause/resume, same-URL reuse, new-URL replacement, fetch failure, cancel, navigation race")
 }
 MainActor.assumeIsolated {

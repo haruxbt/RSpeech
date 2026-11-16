@@ -9,9 +9,10 @@ from voicevox_core.blocking import Onnxruntime, OpenJtalk, Synthesizer, VoiceMod
 
 def main():
     root = Path(sys.argv[1])
+    jtalk = OpenJtalk(str(next((root / 'dict').glob('open_jtalk_dic*'))))
     synth = Synthesizer(
         Onnxruntime.load_once(filename=sys.argv[2]),
-        OpenJtalk(str(next((root / 'dict').glob('open_jtalk_dic*')))),
+        jtalk,
         acceleration_mode='CPU', cpu_num_threads=2)
     allowed = {'四国めたん', 'ずんだもん', '春日部つむぎ', '雨晴はう', '冥鳴ひまり', '雀松朱司'}
     voices, paths = [], {}
@@ -23,12 +24,34 @@ def main():
                         voices.append({'id': style.id, 'name': meta.name})
                         paths[style.id] = path
     print(json.dumps({'voices': voices}, ensure_ascii=False), flush=True)
+    def reading(word):
+        return ''.join(mora.text for phrase in jtalk.analyze(word) for mora in phrase.moras)
+    letters = {}
     loaded_path = loaded_id = None
     for line in sys.stdin:
         try:
             req = json.loads(line)
+            if req.get('op') == 'analyze':
+                words = req['words']
+                if not isinstance(words, list) or len(words) > 200:
+                    raise ValueError('Invalid word list')
+                results = []
+                for word in words:
+                    if not isinstance(word, str) or not 1 <= len(word) <= 64 or not word.isascii() or not all(c.isalnum() or c in "-'" for c in word):
+                        raise ValueError('Invalid word')
+                    kana = reading(word)
+                    spelled = ''
+                    for char in word:
+                        if char not in letters:
+                            letters[char] = reading(char)
+                        spelled += letters[char]
+                    # Open JTalk renders A as エエ in words and エイ alone.
+                    normal = lambda value: value.replace('エエ', 'エイ')
+                    results.append({'word': word, 'reading': kana, 'isSpelling': not kana or normal(kana) == normal(spelled)})
+                print(json.dumps({'words': results}, ensure_ascii=False), flush=True)
+                continue
             text, speaker, speed = req['text'], int(req['speaker']), float(req['speed'])
-            if not isinstance(text, str) or not 0 < len(text) <= 400 or speaker not in paths or not 0.75 <= speed <= 2:
+            if not isinstance(text, str) or not 0 < len(text) <= 12000 or speaker not in paths or not 0.75 <= speed <= 2:
                 raise ValueError('Invalid input')
             path = paths[speaker]
             if loaded_path != path:

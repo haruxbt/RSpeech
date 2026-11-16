@@ -104,6 +104,19 @@ final class Engine: @unchecked Sendable {
             }
         }
     }
+    func analyze(words: [String]) async throws -> [WordCheck] {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    var request = try JSONSerialization.data(withJSONObject: ["op": "analyze", "words": words])
+                    request.append(10); try self.input?.write(contentsOf: request)
+                    let data = try self.line()
+                    struct Reply: Decodable { let words: [WordCheck] }
+                    continuation.resume(returning: try JSONDecoder().decode(Reply.self, from: data).words)
+                } catch { continuation.resume(throwing: error) }
+            }
+        }
+    }
     deinit { close() }
 }
 
@@ -155,8 +168,10 @@ extension Engine: SpeechEngine {}
     @Published var status = "Safariでページを開いて ▶ を押してください。"
     @Published var voices: [Voice] = []
     @Published var expanded = false
-    @Published var speaker = UserDefaults.standard.object(forKey: "speaker") as? Int ?? 2
-    @Published var speed = UserDefaults.standard.object(forKey: "speed") as? Double ?? 1.2
+    @Published var speaker: Int { didSet { preferences.set(speaker, forKey: "speaker"); settingsChanged() } }
+    @Published var speed: Double { didSet { preferences.set(speed, forKey: "speed"); settingsChanged() } }
+    let dictionary: ReadingDictionary
+    private let preferences: UserDefaults
     @Published private(set) var busy = false
     @Published private(set) var paused = false
     @Published private(set) var fetching = false
@@ -171,10 +186,48 @@ extension Engine: SpeechEngine {}
     private var audioStarted = false
     private var generation = UUID()
     private var fetchGeneration = UUID()
+    private var prefetchTask: Task<Data, Error>?
+    private var prefetchIndex: Int?
+    private var prefetchRevision = 0
+    private var settingsRevision = 0
+    private var nextIndex: Int?
+    private var playbackParts: [String] = []
+    private var engineReady = false
+    private var wordCheckTask: Task<Void, Never>?
+    private var wordCheckEngine: Engine?
+    var isAudioPlaying: Bool { player?.isPlaying ?? false }
 
-    init(safari: any SafariSource = SafariSourceLive(), muted: Bool = false, makeEngine: @escaping () -> any SpeechEngine = { Engine() }) {
+    init(safari: any SafariSource = SafariSourceLive(), muted: Bool = false, dictionary: ReadingDictionary? = nil, preferences: UserDefaults = .standard, makeEngine: @escaping () -> any SpeechEngine = { Engine() }) {
         self.safari = safari; self.muted = muted; self.makeEngine = makeEngine
+        self.preferences = preferences
+        self.speaker = preferences.object(forKey: "speaker") as? Int ?? 2
+        self.speed = preferences.object(forKey: "speed") as? Double ?? 1.2
+        self.dictionary = dictionary ?? ReadingDictionary(defaults: preferences)
+        self.dictionary.onChange = { [weak self] in self?.settingsChanged() }
     }
+    func checkPageWords() {
+        guard !dictionary.checking else { return }
+        dictionary.checking = true; dictionary.scanMessage = "Safariの本文と英単語の読みを確認中…"
+        wordCheckTask = Task {
+            let analyzer = Engine(); wordCheckEngine = analyzer
+            defer { analyzer.close(); wordCheckEngine = nil; dictionary.checking = false }
+            do {
+                let page = try await safari.page()
+                try Task.checkCancellation()
+                let words = englishWords(page.text)
+                guard !words.isEmpty else { dictionary.checks = []; dictionary.scanMessage = "英単語は見つかりませんでした。"; return }
+                _ = try await analyzer.start()
+                try Task.checkCancellation()
+                let results = try await analyzer.analyze(words: Array(words.prefix(200)))
+                try Task.checkCancellation()
+                dictionary.checks = results.sorted { $0.isSpelling && !$1.isSpelling }
+                dictionary.scanMessage = "\(results.count)語を確認しました。綴り読み候補：\(results.filter { $0.isSpelling }.count)語。" + (words.count > 200 ? "先頭200語を表示しています。" : "")
+            } catch {
+                if !Task.isCancelled { dictionary.scanMessage = error.localizedDescription }
+            }
+        }
+    }
+    func cancelWordCheck() { wordCheckTask?.cancel(); wordCheckEngine?.close() }
     func toggle() {
         guard !fetching else { return }
         if busy && !paused {
@@ -219,7 +272,7 @@ extension Engine: SpeechEngine {}
         let parts = chunks(text)
         guard !parts.isEmpty else { return }
         busy = true; paused = false; generation = UUID(); let id = generation
-        UserDefaults.standard.set(speaker, forKey: "speaker"); UserDefaults.standard.set(speed, forKey: "speed")
+        playbackParts = parts; nextIndex = 0
         task = Task {
             do {
                 if engine == nil {
@@ -227,36 +280,86 @@ extension Engine: SpeechEngine {}
                     let e = makeEngine(); engine = e
                     let loaded = try await e.start()
                     guard generation == id else { return }
-                    voices = loaded
+                    engineReady = true; voices = loaded
                     if !voices.contains(where: { $0.id == speaker }) { speaker = 2 }
                 }
-                guard let e = engine else { return }
-                for (index, part) in parts.enumerated() {
+                guard engine != nil else { return }
+                for index in parts.indices {
                     guard generation == id, !Task.isCancelled else { return }
                     status = paused ? "一時停止中" : "音声を準備中 \(index + 1) / \(parts.count)"
-                    let data = try await e.synthesize(part, speaker: speaker, speed: speed)
-                    guard generation == id, !Task.isCancelled else { return }
-                    let audio = try AVAudioPlayer(data: data); player = audio; audioStarted = false
-                    if muted { audio.volume = 0 }
-                    audio.prepareToPlay()
-                    while paused { try await Task.sleep(nanoseconds: 50_000_000) }
-                    guard generation == id, !Task.isCancelled else { return }
+                    nextIndex = index
+                    var prepared: AVAudioPlayer?
+                    while generation == id && !Task.isCancelled {
+                        let data = try await preparedAudio(index: index, generation: id)
+                        guard generation == id, !Task.isCancelled else { return }
+                        let revision = settingsRevision
+                        let audio = try AVAudioPlayer(data: data); player = audio; audioStarted = false
+                        if muted { audio.volume = 0 }
+                        audio.prepareToPlay()
+                        while paused { try await Task.sleep(nanoseconds: 10_000_000) }
+                        guard generation == id, !Task.isCancelled else { return }
+                        if revision != settingsRevision { continue }
+                        prepared = audio; break
+                    }
+                    guard let audio = prepared else { throw CancellationError() }
                     guard audio.play() else { throw ReaderError(message: "音声を再生できませんでした。Macの出力先を確認してください。") }
                     audioStarted = true
+                    nextIndex = index + 1 < parts.count ? index + 1 : nil
+                    if let nextIndex { prefetch(index: nextIndex) }
                     status = "読み上げ中 \(index + 1) / \(parts.count)"
-                    while audio.isPlaying || paused { try await Task.sleep(nanoseconds: 50_000_000) }
+                    while audio.isPlaying || paused { try await Task.sleep(nanoseconds: 10_000_000) }
                     player = nil; audioStarted = false
                 }
-                busy = false; paused = false; status = "読み上げが終わりました。"
+                busy = false; paused = false; nextIndex = nil; playbackParts = []; status = "読み上げが終わりました。"
             } catch {
                 guard generation == id else { return }
                 stopPlayback(); status = error.localizedDescription
             }
         }
     }
+    private func settingsChanged() {
+        settingsRevision += 1
+        prefetchTask?.cancel(); prefetchTask = nil; prefetchIndex = nil
+        if busy, engineReady, let nextIndex { prefetch(index: nextIndex) }
+    }
+    private func prefetch(index: Int) {
+        guard playbackParts.indices.contains(index), let engine, engineReady else { return }
+        if prefetchIndex == index && prefetchRevision == settingsRevision && prefetchTask != nil { return }
+        prefetchTask?.cancel()
+        let spoken = pronunciation(playbackParts[index], entries: dictionary.entries)
+        let speaker = self.speaker, speed = self.speed
+        prefetchIndex = index; prefetchRevision = settingsRevision
+        prefetchTask = Task {
+            try Task.checkCancellation()
+            let data = try await engine.synthesize(spoken, speaker: speaker, speed: speed)
+            try Task.checkCancellation()
+            return data
+        }
+    }
+    private func preparedAudio(index: Int, generation id: UUID) async throws -> Data {
+        while generation == id && !Task.isCancelled {
+            prefetch(index: index)
+            guard let pending = prefetchTask else { throw CancellationError() }
+            let revision = prefetchRevision
+            do {
+                let data = try await pending.value
+                guard generation == id else { throw CancellationError() }
+                if revision != settingsRevision { continue }
+                prefetchTask = nil; prefetchIndex = nil
+                return data
+            } catch {
+                guard generation == id else { throw CancellationError() }
+                if revision != settingsRevision { continue }
+                throw error
+            }
+        }
+        throw CancellationError()
+    }
     private func stopPlayback() {
         generation = UUID(); task?.cancel(); task = nil
         player?.stop(); player = nil; audioStarted = false
+        prefetchTask?.cancel(); prefetchTask = nil; prefetchIndex = nil
+        nextIndex = nil; playbackParts = []; engineReady = false
         engine?.close(); engine = nil; busy = false; paused = false
     }
     func stop() {
@@ -267,6 +370,7 @@ extension Engine: SpeechEngine {}
 
 struct ContentView: View {
     @ObservedObject var reader: Reader
+    var openSettings: () -> Void = {}
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 16) {
@@ -279,28 +383,36 @@ struct ContentView: View {
                         Text("四国めたん").tag(2); Text("ずんだもん").tag(3); Text("春日部つむぎ").tag(8)
                         Text("雨晴はう").tag(10); Text("冥鳴ひまり").tag(14); Text("雀松朱司").tag(52)
                     } else { ForEach(reader.voices) { Text($0.name).tag($0.id) } }
-                }.frame(width: 190).disabled(reader.busy || reader.fetching)
+                }.frame(width: 190)
                 Picker("速度", selection: $reader.speed) {
                     ForEach([0.75, 1.0, 1.2, 1.5, 1.75, 2.0], id: \.self) { Text(String(format: "%.2g倍", $0)).tag($0) }
-                }.frame(width: 135).disabled(reader.busy || reader.fetching)
+                }.frame(width: 135)
             }
             Text(reader.status).font(.callout).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             DisclosureGroup("取得した本文（\(reader.text.count)文字）", isExpanded: $reader.expanded) {
                 ScrollView { Text(reader.text.isEmpty ? "本文はまだ取得していません。" : reader.text).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).padding(8) }
                     .frame(height: 250).background(Color(nsColor: .textBackgroundColor)).cornerRadius(5)
             }
+            HStack {
             Text("VOICEVOX:\(reader.voices.first(where: { $0.id == reader.speaker })?.name ?? [2:"四国めたん", 3:"ずんだもん", 8:"春日部つむぎ", 10:"雨晴はう", 14:"冥鳴ひまり", 52:"雀松朱司"][reader.speaker] ?? "四国めたん")").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button(action: openSettings) { Image(systemName: "gearshape") }.buttonStyle(.plain).accessibilityLabel("設定")
+            }
         }.padding(18).frame(width: 530)
     }
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
-    let reader = Reader()
+    let dictionary = ReadingDictionary()
+    lazy var reader = Reader(dictionary: dictionary)
+    var settingsWindow: NSWindow?
     var window: NSWindow!
     var item: NSStatusItem!
     func applicationDidFinishLaunching(_ notification: Notification) {
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem(); let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "設定…", action: #selector(settings), keyEquivalent: ",").target = self
+        appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "RSpeechを終了", action: #selector(quit), keyEquivalent: "q").target = self
         appMenuItem.submenu = appMenu; mainMenu.addItem(appMenuItem)
         let editItem = NSMenuItem(); let editMenu = NSMenu(title: "編集")
@@ -310,28 +422,45 @@ struct ContentView: View {
         editMenu.addItem(withTitle: "コピー", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: "ペースト", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: "すべてを選択", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
-        editItem.submenu = editMenu; mainMenu.addItem(editItem); NSApp.mainMenu = mainMenu
+        editItem.submenu = editMenu; mainMenu.addItem(editItem)
+        let windowItem = NSMenuItem(); let windowMenu = NSMenu(title: "ウインドウ")
+        windowMenu.addItem(withTitle: "読み上げウインドウを開く", action: #selector(show), keyEquivalent: "1").target = self
+        windowMenu.addItem(withTitle: "ウインドウを閉じる", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        windowItem.submenu = windowMenu; mainMenu.addItem(windowItem); NSApp.mainMenu = mainMenu
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 566, height: 190), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "RSpeech"; window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: ContentView(reader: reader)); window.center(); show()
+        window.contentView = NSHostingView(rootView: ContentView(reader: reader, openSettings: { [weak self] in self?.settings() })); window.center(); show()
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.image = NSImage(systemSymbolName: "speaker.wave.2", accessibilityDescription: "RSpeech")
         let menu = NSMenu()
         menu.addItem(withTitle: "ウインドウを開く", action: #selector(show), keyEquivalent: "").target = self
         menu.addItem(withTitle: "再生 / 一時停止", action: #selector(fetch), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "設定…", action: #selector(settings), keyEquivalent: "").target = self
         menu.addItem(withTitle: "読み上げを停止", action: #selector(stop), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "終了", action: #selector(quit), keyEquivalent: "q").target = self
         item.menu = menu
+    }
+    @objc func settings() {
+        if settingsWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 530), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "RSpeech 設定"; window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: DictionarySettingsView(dictionary: dictionary, checkPage: { [weak self] in self?.reader.checkPageWords() })); window.center()
+            settingsWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true); settingsWindow?.makeKeyAndOrderFront(nil)
     }
     @objc func show() { NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil) }
     @objc func fetch() { show(); reader.toggle() }
     @objc func stop() { reader.stop() }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { show(); return true }
-    func applicationWillTerminate(_ notification: Notification) { reader.stop() }
+    func applicationWillTerminate(_ notification: Notification) { reader.stop(); reader.cancelWordCheck() }
 }
 
+@main
+struct RSpeechApp {
+    static func main() {
 if CommandLine.arguments.contains("--self-test") {
     let text = "日本語とSafari、APIを同じ声で読みます。\n" + String(repeating: "長文です。", count: 200)
     let parts = chunks(text)
@@ -352,8 +481,13 @@ if CommandLine.arguments.contains("--self-test") {
             do {
                 let voices = try await engine.start()
                 precondition(voices.count == 6)
+                let words = try await engine.analyze(words: ["ARTEX", "Linux", "API"])
+                precondition(words.first(where: { $0.word == "ARTEX" })?.isSpelling == true)
+                precondition(words.first(where: { $0.word == "Linux" })?.isSpelling == false)
                 for speaker in [2, 14, 52, 2] {
-                    let wav = try await engine.synthesize("SafariのWebページとAPIを同じ声で読みます。", speaker: speaker, speed: 1.5)
+                    let spoken = pronunciation("ARTEXとSafariのページを同じ声で読みます。", entries: [ReadingEntry(word: "ARTEX", reading: "アルテックス")])
+                    precondition(spoken.hasPrefix("アルテックス"))
+                    let wav = try await engine.synthesize(spoken, speaker: speaker, speed: 1.5)
                     let audio = try AVAudioPlayer(data: wav)
                     precondition(audio.duration > 0)
                     if speaker == 2 {
@@ -363,7 +497,7 @@ if CommandLine.arguments.contains("--self-test") {
                     }
                 }
                 engine.close()
-                print("6 voices discovered; mixed Japanese/English synthesis, model switching, muted playback passed")
+                print("6 voices, actual word analysis, dictionary reading synthesis, model switching, muted playback passed")
                 exit(0)
             } catch {
                 engine.close(); print("Audio integration check failed: \(error.localizedDescription)"); exit(1)
@@ -375,5 +509,8 @@ if CommandLine.arguments.contains("--self-test") {
     MainActor.assumeIsolated {
         let app = NSApplication.shared
         let delegate = AppDelegate(); app.delegate = delegate; app.setActivationPolicy(.regular); app.run()
+    }
+}
+
     }
 }
