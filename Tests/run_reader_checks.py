@@ -3,6 +3,8 @@
 from pathlib import Path
 import subprocess
 import tempfile
+import argparse
+parser = argparse.ArgumentParser(); parser.add_argument("--network", action="store_true"); args = parser.parse_args()
 root = Path(__file__).resolve().parent.parent
 with tempfile.TemporaryDirectory(prefix='rspeech-reader-checks-') as temp:
     temp = Path(temp)
@@ -10,4 +12,4 @@ with tempfile.TemporaryDirectory(prefix='rspeech-reader-checks-') as temp:
     (temp / 'main.swift').write_text((root/'Pronunciation.swift').read_text() + '\n' + declarations + (root / 'Tests/ReaderChecks.swift').read_text())
     executable = temp / 'checks'
     subprocess.run(['xcrun', 'swiftc', '-swift-version', '5', str(temp/'main.swift'), '-o', str(executable), '-framework', 'AppKit', '-framework', 'SwiftUI', '-framework', 'AVFoundation'], check=True)
-    subprocess.run([str(executable)], check=True, timeout=60)
+    subprocess.run([str(executable)] + (["--network"] if args.network else []), check=True, timeout=60)

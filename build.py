@@ -67,8 +67,9 @@ copy_tree(here / 'licenses', resources / 'licenses') if (here / 'licenses').is_d
 subprocess.run(['xcrun', 'swiftc', '-swift-version', '5', '-target', 'arm64-apple-macos14.0', '-file-prefix-map', str(here) + '=/RSpeech', '-O', str(here / 'Main.swift'), str(here / 'Pronunciation.swift'), '-o', str(macos / 'RSpeech'), '-framework', 'AppKit', '-framework', 'SwiftUI', '-framework', 'AVFoundation'], check=True)
 shutil.copy2(here / 'worker.py', resources / 'worker.py')
 shutil.copy2(here / 'PageExtraction.js', resources / 'PageExtraction.js')
+shutil.copy2(here / 'Dictionary/common-ja.json', resources / 'common-ja.json')
 (resources / 'runtime.json').write_text(json.dumps({'python': 'Python/bin/python3.13', 'runtime': str(runtime.relative_to(resources))}))
-info = {'CFBundleIdentifier': 'local.flop.RSpeech', 'CFBundleName': 'RSpeech', 'CFBundleDisplayName': 'RSpeech', 'CFBundleExecutable': 'RSpeech', 'CFBundlePackageType': 'APPL', 'CFBundleIconFile': 'RSpeech.icns', 'CFBundleShortVersionString': '1.2.0', 'CFBundleVersion': '5', 'LSMinimumSystemVersion': '14.0', 'NSHighResolutionCapable': True, 'NSAppleEventsUsageDescription': 'Safariの現在のページの本文を取得して、端末内のVOICEVOXで読み上げます。'}
+info = {'CFBundleIdentifier': 'local.flop.RSpeech', 'CFBundleName': 'RSpeech', 'CFBundleDisplayName': 'RSpeech', 'CFBundleExecutable': 'RSpeech', 'CFBundlePackageType': 'APPL', 'CFBundleIconFile': 'RSpeech.icns', 'CFBundleShortVersionString': '1.3.0', 'CFBundleVersion': '6', 'LSMinimumSystemVersion': '14.0', 'NSHighResolutionCapable': True, 'NSAppleEventsUsageDescription': 'Safariの現在のページの本文を取得して、端末内のVOICEVOXで読み上げます。'}
 with (contents / 'Info.plist').open('wb') as f:
     plistlib.dump(info, f)
 # The standalone interpreter has no libpython dependency. Do not ship its unused

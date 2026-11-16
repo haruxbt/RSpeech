@@ -21,8 +21,8 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     init(onRequest: @escaping @MainActor @Sendable (String, Int, Double) -> Void = { _, _, _ in }) { self.onRequest = onRequest }
     func start() async throws -> [Voice] { [Voice(id: 2, name: "四国めたん")] }
     func close() {}
-    func synthesize(_ text: String, speaker: Int, speed: Double) async throws -> Data {
-        await onRequest(text, speaker, speed)
+    func synthesize(_ text: String, speaker: Int, speed: Double, dictionary: [ReadingEntry]) async throws -> Data {
+        await onRequest(pronunciation(text, entries: dictionary), speaker, speed)
         try await Task.sleep(nanoseconds: 150_000_000)
         // Two seconds of silence, used only in memory for playback state tests.
         var data = Data()
@@ -65,6 +65,31 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     dictionary.word = "Linux"; dictionary.reading = "誤更新"; dictionary.register()
     precondition(dictionary.entries == originalEntries, "Editing into a duplicate must preserve both entries")
     dictionary.reset()
+    let fixture = CommonDictionaryFile(schemaVersion: 1, version: "1.0", entries: [ReadingEntry(word: "PUT", reading: "プット"), ReadingEntry(word: "ARTEX", reading: "アルテックス")])
+    let commonData = try JSONEncoder().encode(fixture)
+    try dictionary.applyCommon(commonData, persist: false)
+    precondition(dictionary.effectiveEntries.contains(where: { $0.word == "PUT" }))
+    precondition(dictionary.effectiveEntries.filter { $0.word.lowercased() == "artex" }.count == 1)
+    precondition(dictionary.effectiveEntries.first(where: { $0.word.lowercased() == "artex" })?.id == dictionary.entries.first(where: { $0.word == "ARTEX" })?.id, "Personal entries must override shared ones")
+    try dictionary.importJSON(try JSONEncoder().encode([ReadingEntry(word: "POST", reading: "ポスト", accent: 1, priority: 7)]))
+    precondition(dictionary.entries.contains(where: { $0.word == "POST" && $0.accent == 1 && $0.priority == 7 }))
+    let engineJSON = Data(#"{"test-id":{"surface":"ＧＥＴ","pronunciation":"ゲット","accent_type":1,"priority":5}}"#.utf8)
+    try dictionary.importJSON(engineJSON)
+    precondition(dictionary.entries.contains(where: { $0.word == "GET" && $0.reading == "ゲット" }))
+    let exported = try dictionary.exportJSON()
+    let exportedEntries = try decodeImportedReadings(exported)
+    precondition(exportedEntries == dictionary.entries)
+    let versionBefore = dictionary.commonVersion
+    do { try dictionary.applyCommon(Data("{}".utf8), persist: false); preconditionFailure("Invalid remote data accepted") } catch {}
+    precondition(dictionary.commonVersion == versionBefore, "Invalid update must retain cached data")
+    do { try dictionary.applyCommon(try JSONEncoder().encode(CommonDictionaryFile(schemaVersion: 1, version: "0.9", entries: [])), persist: false); preconditionFailure("Downgrade accepted") } catch {}
+    let cacheDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: cacheDirectory) }
+    let cacheURL = cacheDirectory.appendingPathComponent("common.json")
+    let cached = ReadingDictionary(defaults: preferences, cacheURL: cacheURL)
+    try cached.applyCommon(commonData)
+    precondition(ReadingDictionary(defaults: preferences, cacheURL: cacheURL).commonVersion == "1.0", "Offline cache must load on restart")
+    print("Common JSON validation, personal override, import/export, engine JSON, cache restart and rollback checks passed")
     let source = FakeSafari()
     let reader = Reader(safari: source, muted: true, dictionary: dictionary, preferences: preferences, makeEngine: { FakeSpeech() })
     reader.toggle()
@@ -130,6 +155,15 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     precondition(preferences.integer(forKey: "speaker") == 8 && preferences.double(forKey: "speed") == 2)
     pipeline.stop(); pipeline.speaker = 2; pipeline.speed = 1.2
     precondition(!pipeline.busy)
+    if CommandLine.arguments.contains("--network") {
+        let online = ReadingDictionary(defaults: preferences, cacheURL: cacheDirectory.appendingPathComponent("download.json"))
+        online.updateCommon()
+        let deadline = Date().addingTimeInterval(25)
+        while online.updating && Date() < deadline { try await Task.sleep(nanoseconds: 100_000_000) }
+        precondition(online.commonEntries.count >= 789, online.commonStatus)
+        precondition(online.commonEntries.contains(where: { $0.word == "Intent" && $0.reading == "インテント" }))
+        print("Live GitHub JSON fetch, validation and cache write passed")
+    }
     print("Dictionary persistence/update/delete, non-cascading readings, playback overlap, live voice/speed/dictionary invalidation passed")
     print("Reader checks passed: one-button playback, preparation pause/resume, same-URL reuse, new-URL replacement, fetch failure, cancel, navigation race")
 }

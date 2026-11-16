@@ -5,7 +5,7 @@ Safariで開いているページの本文を、VOICEVOXの同じ声で読み上
 
 ## ダウンロード
 
-**[最新版のダウンロード](https://github.com/haruxbt/RSpeech/releases/latest)** から `RSpeech-v1.2.0-macOS-arm64.zip` を取得してください。ソースコードのZIPではなく、Releases内のアプリ用ZIPを使います。
+**[最新版のダウンロード](https://github.com/haruxbt/RSpeech/releases/latest)** から `RSpeech-v1.3.0-macOS-arm64.zip` を取得してください。ソースコードのZIPではなく、Releases内のアプリ用ZIPを使います。
 
 1. ZIPを展開します。
 2. `RSpeech.app` を「アプリケーション」へコピーします。
@@ -30,14 +30,24 @@ Apple Silicon向けです。RTranslateでVOICEVOXデータを準備しておく�
 
 右下の歯車またはメニューの「設定…」を開きます。
 
-- **ワード追加・編集**：文字と読みを入力して登録します。例：`ARTEX` → `アルテックス`。編集・削除もできます。
+- **ワード追加・編集**：文字・かな読み・アクセント位置・優先度を指定して登録します。例：`ARTEX` → `アルテックス`。編集・削除もできます。
 - **ページの英単語**：「現在のページの英単語を確認」を押すと、Safariの本文にある英単語とVOICEVOXの標準の読みを表示します。
-- 最初は1文字ずつ読む「綴り読み候補」だけを表示します。チェックを外すと他の単語の読みも確認できます。
+- 最初は共通・個人辞書に未登録で、1文字ずつ読む「綴り読み候補」だけを表示します。チェックを外すと他の単語の読みも確認できます。
 - 「登録する読み」を必要な行に入力して、**「入力した読みをまとめて登録」**を押します。
 
-CPUのように綴り読みで正しい単語もあるため、候補は誤読の断定ではありません。固有名詞の正しい読みは確認してください。1回に最大200語を解析し、辞書は100件、文字・読みはそれぞれ64文字まで登録できます。
+CPUのように綴り読みで正しい単語もあるため、候補は誤読の断定ではありません。固有名詞の正しい読みは確認してください。1回に最大200語を解析し、個人辞書は1000件、文字・読みはそれぞれ64文字まで登録できます。
 登録した辞書はこのMacに保存します。表示された本文は変えず、音声合成時だけ読みを適用します。英字の大文字・小文字は区別せず、英単語の一部分だけを置き換えないようにします。RTranslateの辞書・モデルは変更しません。
 声・速度・辞書の変更は、まだ読み始めていない次の文に反映します。
+
+### GitHubの共通辞書
+
+[共通辞書JSON](Dictionary/common-ja.json)には、IT・プログラミング・AI・セキュリティ、ネットワークメーカー・製品名など789語の初期読みを用意しています。Intent / Planner / Write、put / get / read / write / post、Cisco / Catalyst / Palo Alto / Fortinet / Juniper / Arista / A10 / F5 / CrowdStrike / Zscaler / Infobloxなどを含みます。
+
+起動時にGitHubから公開JSONを確認し、検証してからこのMacへ保存します。通信に失敗したときは手元の共通辞書を使います。**同じ単語は個人辞書の登録を優先**するため、更新で自分の読みが上書きされません。
+
+設定の「共通辞書・JSON」から自動更新のON/OFF、今すぐ更新、共通語の検索と読みの修正、個人辞書のJSON取り込み・書き出しができます。アクセント0は平板の初期値、優先度の初期値は5です。読みの好みは個人辞書で調整してください。
+
+RSpeech形式のJSON配列と、VOICEVOX EngineのUUID形式JSONの基本項目を取り込めます。RSpeechはVOICEVOX Coreを直接使うため、EngineのHTTPサーバーを起動する必要はありません。詳細・出典・編集方法は[共通辞書の説明](Dictionary/README.md)にあります。
 
 ## 文間の待ち時間
 
@@ -54,9 +64,9 @@ SafariでJavaScriptの実行が禁止されている場合は、Safariの設定 
 
 四国めたん・ずんだもん・春日部つむぎ・雨晴はう・冥鳴ひまり・雀松朱司のノーマル音声を選べます。速度は0.75〜2倍です。英単語の発音はVOICEVOXの辞書に依存します。
 
-本文・URL・生成音声はメモリで扱い、保存・ログ出力・外部送信しません。音声合成用のHTTPサーバーも起動しません。声・速度と、登録した辞書の文字・読みをこのMacに保存します。Safari自体による通常の閲覧通信は別です。
+本文・URL・生成音声・ページの単語解析結果はメモリで扱い、保存・ログ出力・外部送信しません。GitHubへの通信は固定URLの公開辞書JSONの取得だけで、本文や個人辞書を送信しません。音声合成用のHTTPサーバーも起動しません。声・速度、登録した辞書の文字・読み・アクセント・優先度、公開共通辞書のキャッシュをこのMacに保存します。Safari自体による通常の閲覧通信は別です。
 
-ログイン中のユーザーのホームディレクトリから、`Library/Application Support/RTranslate/Assets/voicevox` の絶対パスを組み立て、RTranslateのモデル・辞書だけを使います。モデルや辞書はRSpeechに同梱しません。見つからない場合は準備を案内して停止します。RTranslateの設定やファイルは変更しません。
+ログイン中のユーザーのホームディレクトリから、`Library/Application Support/RTranslate/Assets/voicevox` の絶対パスを組み立て、RTranslateのモデル・辞書だけを使います。VOICEVOXのモデルやOpen JTalk基本辞書はRSpeechに同梱しません。見つからない場合は準備を案内して停止します。RTranslateの設定やファイルは変更しません。
 
 音声を公開する場合は、[第三者ライセンス・声ごとの規約](THIRD_PARTY_NOTICES.md)とクレジット条件を確認してください。
 
@@ -76,6 +86,7 @@ npm install
 npm test
 dist/RSpeech.app/Contents/MacOS/RSpeech --self-test
 dist/RSpeech.app/Contents/MacOS/RSpeech --audio-self-test
+python3 Tests/check_common_dictionary.py --app dist/RSpeech.app
 ```
 
 再生状態・URL切替・取得失敗・取得中の停止/ページ遷移、タイトル除外・段落順序、辞書の保存・編集・一括登録、再生と次文合成の重なり、声・速度・辞書の途中変更などを検証します。

@@ -89,11 +89,12 @@ final class Engine: @unchecked Sendable {
             }
         }
     }
-    func synthesize(_ text: String, speaker: Int, speed: Double) async throws -> Data {
+    func synthesize(_ text: String, speaker: Int, speed: Double, dictionary: [ReadingEntry]) async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
-                    var request = try JSONSerialization.data(withJSONObject: ["text": text, "speaker": speaker, "speed": speed])
+                    let words = try JSONSerialization.jsonObject(with: JSONEncoder().encode(dictionary))
+                    var request = try JSONSerialization.data(withJSONObject: ["text": text, "speaker": speaker, "speed": speed, "dictionary": words])
                     request.append(10); try self.input?.write(contentsOf: request)
                     let reply = try JSONSerialization.jsonObject(with: self.line()) as! [String: Any]
                     guard let wav = reply["wav"] as? String, let data = Data(base64Encoded: wav) else {
@@ -104,11 +105,12 @@ final class Engine: @unchecked Sendable {
             }
         }
     }
-    func analyze(words: [String]) async throws -> [WordCheck] {
+    func analyze(words: [String], dictionary: [ReadingEntry] = []) async throws -> [WordCheck] {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
-                    var request = try JSONSerialization.data(withJSONObject: ["op": "analyze", "words": words])
+                    let entries = try JSONSerialization.jsonObject(with: JSONEncoder().encode(dictionary))
+                    var request = try JSONSerialization.data(withJSONObject: ["op": "analyze", "words": words, "dictionary": entries])
                     request.append(10); try self.input?.write(contentsOf: request)
                     let data = try self.line()
                     struct Reply: Decodable { let words: [WordCheck] }
@@ -157,8 +159,13 @@ struct SafariSourceLive: SafariSource {
 }
 protocol SpeechEngine: AnyObject, Sendable {
     func start() async throws -> [Voice]
-    func synthesize(_ text: String, speaker: Int, speed: Double) async throws -> Data
+    func synthesize(_ text: String, speaker: Int, speed: Double, dictionary: [ReadingEntry]) async throws -> Data
     func close()
+}
+extension SpeechEngine {
+    func synthesize(_ text: String, speaker: Int, speed: Double) async throws -> Data {
+        try await synthesize(text, speaker: speaker, speed: speed, dictionary: [])
+    }
 }
 extension Engine: SpeechEngine {}
 
@@ -221,7 +228,8 @@ extension Engine: SpeechEngine {}
                 let results = try await analyzer.analyze(words: Array(words.prefix(200)))
                 try Task.checkCancellation()
                 dictionary.checks = results.sorted { $0.isSpelling && !$1.isSpelling }
-                dictionary.scanMessage = "\(results.count)語を確認しました。綴り読み候補：\(results.filter { $0.isSpelling }.count)語。" + (words.count > 200 ? "先頭200語を表示しています。" : "")
+                let registered = Set(dictionary.effectiveEntries.map { $0.word.lowercased() })
+                dictionary.scanMessage = "\(results.count)語を確認しました。未登録の綴り読み候補：\(results.filter { $0.isSpelling && !registered.contains($0.word.lowercased()) }.count)語。" + (words.count > 200 ? "先頭200語を表示しています。" : "")
             } catch {
                 if !Task.isCancelled { dictionary.scanMessage = error.localizedDescription }
             }
@@ -326,12 +334,13 @@ extension Engine: SpeechEngine {}
         guard playbackParts.indices.contains(index), let engine, engineReady else { return }
         if prefetchIndex == index && prefetchRevision == settingsRevision && prefetchTask != nil { return }
         prefetchTask?.cancel()
-        let spoken = pronunciation(playbackParts[index], entries: dictionary.entries)
+        let spoken = playbackParts[index]
+        let entries = dictionary.effectiveEntries
         let speaker = self.speaker, speed = self.speed
         prefetchIndex = index; prefetchRevision = settingsRevision
         prefetchTask = Task {
             try Task.checkCancellation()
-            let data = try await engine.synthesize(spoken, speaker: speaker, speed: speed)
+            let data = try await engine.synthesize(spoken, speaker: speaker, speed: speed, dictionary: entries)
             try Task.checkCancellation()
             return data
         }
@@ -403,7 +412,7 @@ struct ContentView: View {
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
-    let dictionary = ReadingDictionary()
+    let dictionary = ReadingDictionary(shared: true)
     lazy var reader = Reader(dictionary: dictionary)
     var settingsWindow: NSWindow?
     var window: NSWindow!
@@ -440,6 +449,7 @@ struct ContentView: View {
         menu.addItem(.separator())
         menu.addItem(withTitle: "終了", action: #selector(quit), keyEquivalent: "q").target = self
         item.menu = menu
+        if dictionary.autoUpdate { dictionary.updateCommon() }
     }
     @objc func settings() {
         if settingsWindow == nil {
