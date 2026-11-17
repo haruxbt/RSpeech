@@ -74,16 +74,25 @@ def main():
                 for word in words:
                     if not isinstance(word, str) or not 1 <= len(word) <= 64 or not word.isascii() or not all(c.isalnum() or c in "-'" for c in word):
                         raise ValueError('Invalid word')
-                    phrases = jtalk.analyze(canonical(word))
-                    kana = ''.join(mora.text for phrase in phrases for mora in phrase.moras)
-                    spelled = ''
-                    for char in word:
-                        if char not in letters:
-                            letters[char] = reading(char)
-                        spelled += letters[char]
-                    # Open JTalk renders A as エエ in words and エイ alone.
-                    normal = lambda value: value.replace('エエ', 'エイ')
-                    results.append({'word': word, 'reading': kana, 'isSpelling': not kana or normal(kana) == normal(spelled), 'accents': [phrase.accent for phrase in phrases]})
+                    try:
+                        phrases = jtalk.analyze(canonical(word))
+                        kana = ''.join(mora.text for phrase in phrases for mora in phrase.moras)
+                        spelled = ''
+                        # A separator has no phonemes on its own; analyzing '-' or "'"
+                        # throws AnalyzeTextError and used to discard the entire batch.
+                        for char in word:
+                            if not char.isalnum():
+                                continue
+                            if char not in letters:
+                                letters[char] = reading(char)
+                            spelled += letters[char]
+                        # Open JTalk renders A as エエ in words and エイ alone.
+                        normal = lambda value: value.replace('エエ', 'エイ')
+                        results.append({'word': word, 'reading': kana, 'isSpelling': not kana or normal(kana) == normal(spelled), 'accents': [phrase.accent for phrase in phrases]})
+                    except Exception:
+                        # Keep the word visible for manual registration; one unknown term
+                        # must never hide the other terms collected from the article.
+                        results.append({'word': word, 'reading': '', 'isSpelling': True, 'accents': []})
                 print(json.dumps({'words': results}, ensure_ascii=False), flush=True)
                 continue
             text, speaker, speed = req['text'], int(req['speaker']), float(req['speed'])

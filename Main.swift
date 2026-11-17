@@ -139,12 +139,10 @@ struct PagePosition: Codable, Sendable {
 protocol SafariSource: Sendable {
     func currentURL() async throws -> String
     func page() async throws -> Page
-    func wholePage() async throws -> Page
     func position() async throws -> PagePosition
 }
 extension SafariSource {
     func position() async throws -> PagePosition { PagePosition(url: try await currentURL()) }
-    func wholePage() async throws -> Page { try await page() }
 }
 struct SafariSourceLive: SafariSource {
     private func execute(_ source: String) async throws -> String {
@@ -191,13 +189,13 @@ struct SafariSourceLive: SafariSource {
         return page
     }
     func page() async throws -> Page { try await extract(respectSelection: true) }
-    func wholePage() async throws -> Page { try await extract(respectSelection: false) }
 
 }
 protocol SpeechEngine: AnyObject, Sendable {
     func start() async throws -> [Voice]
     func synthesize(_ text: String, speaker: Int, speed: Double, dictionary: [ReadingEntry]) async throws -> Data
     func close()
+    func analyze(words: [String], dictionary: [ReadingEntry]) async throws -> [WordCheck]
 }
 extension SpeechEngine {
     func synthesize(_ text: String, speaker: Int, speed: Double) async throws -> Data {
@@ -240,7 +238,7 @@ extension Engine: SpeechEngine {}
     private var playbackParts: [String] = []
     private var engineReady = false
     private var wordCheckTask: Task<Void, Never>?
-    private var wordCheckEngine: Engine?
+    private var wordCheckEngine: (any SpeechEngine)?
     private var previewTask: Task<Void, Never>?
     private var previewPlayer: AVAudioPlayer?
     private var previewEngine: (any SpeechEngine)?
@@ -257,20 +255,42 @@ extension Engine: SpeechEngine {}
         self.dictionary = dictionary ?? ReadingDictionary(defaults: preferences)
         self.dictionary.onChange = { [weak self] in self?.settingsChanged() }
     }
+    private func canReusePage(at position: PagePosition) -> Bool {
+        let newDocument = position.documentID != nil && position.documentID != documentID
+        let newSelection = position.selectionID != nil && position.selectionID != selectionID
+        let clearedOnRestart = !busy && selectionID != nil && position.selectionID == nil
+        return position.url == pageURL && !newDocument && !newSelection && !clearedOnRestart && !text.isEmpty
+    }
+    // Both playback and word collection use this exact extraction and navigation check.
+    private func fetchPage() async throws -> Page {
+        let page = try await safari.page()
+        guard try await safari.position().matches(page) else {
+            throw ReaderError(message: "取得中にページまたは選択位置が変わりました。もう一度実行してください。")
+        }
+        guard !page.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw ReaderError(message: "読み上げられる本文がありません。")
+        }
+        return page
+    }
     func checkPageWords() {
         guard !dictionary.checking else { return }
+        dictionary.checks = []
         dictionary.checking = true; dictionary.scanMessage = "Safariの本文と英単語の読みを確認中…"
         wordCheckTask = Task {
-            let analyzer = Engine(); wordCheckEngine = analyzer
+            let analyzer = makeEngine(); wordCheckEngine = analyzer
             defer { analyzer.close(); wordCheckEngine = nil; dictionary.checking = false }
             do {
-                let page = try await safari.wholePage()
+                let position = try await safari.position()
+                let page: Page
+                if canReusePage(at: position) {
+                    page = Page(url: pageURL!, text: text, documentID: documentID, selectionID: selectionID)
+                } else { page = try await fetchPage() }
                 try Task.checkCancellation()
                 let words = englishWords(page.text)
                 guard !words.isEmpty else { dictionary.checks = []; dictionary.scanMessage = "英単語は見つかりませんでした。"; return }
                 _ = try await analyzer.start()
                 try Task.checkCancellation()
-                let results = try await analyzer.analyze(words: Array(words.prefix(200)))
+                let results = try await analyzer.analyze(words: Array(words.prefix(200)), dictionary: [])
                 try Task.checkCancellation()
                 dictionary.checks = results.sorted { $0.isSpelling && !$1.isSpelling }
                 let registered = Set(dictionary.effectiveEntries.map { $0.word.lowercased() })
@@ -340,23 +360,12 @@ extension Engine: SpeechEngine {}
             do {
                 let position = try await safari.position()
                 guard fetchGeneration == request else { return }
-                let newDocument = position.documentID != nil && position.documentID != documentID
-                let newSelection = position.selectionID != nil && position.selectionID != selectionID
-                let clearedOnRestart = !busy && selectionID != nil && position.selectionID == nil
-                if position.url != pageURL || newDocument || newSelection || clearedOnRestart || text.isEmpty {
+                if !canReusePage(at: position) {
                     // Clear the old page before fetching; a failed fetch must not resume old speech.
                     stopPlayback(); text = ""; pageURL = nil; documentID = nil; selectionID = nil
                     status = "Safariから本文を取得中…"
-                    let page = try await safari.page()
+                    let page = try await fetchPage()
                     guard fetchGeneration == request else { return }
-                    // The tab may have navigated while JavaScript was extracting the page.
-                    guard try await safari.position().matches(page) else {
-                        throw ReaderError(message: "取得中にページまたは選択位置が変わりました。もう一度 ▶ を押してください。")
-                    }
-                    guard fetchGeneration == request else { return }
-                    guard !page.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        throw ReaderError(message: "読み上げられる本文がありません。")
-                    }
                     text = page.text; pageURL = page.url; documentID = page.documentID; selectionID = page.selectionID
                 }
                 guard fetchGeneration == request else { return }

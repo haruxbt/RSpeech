@@ -139,7 +139,7 @@ func englishWords(_ text: String) -> [String] {
     @Published var checks: [WordCheck] = []
     @Published var checking = false
     @Published var scanMessage = "現在のSafariページの英単語を調べられます。"
-    @Published var onlySpelling = true
+    @Published var onlySpelling = false
     private let defaults: UserDefaults
     private let key = "readingDictionaryV1"
     private var writable = true
@@ -307,9 +307,6 @@ struct DictionarySettingsView: View {
     var body: some View {
         let registered = Dictionary(dictionary.effectiveEntries.map { ($0.word.lowercased(), $0) }, uniquingKeysWith: { _, new in new })
         return VStack(alignment: .leading, spacing: 12) {
-            Text("読み上げ辞書").font(.title2.bold())
-            Text("表示を変えず、読み上げるときだけ読み方を変更します。声・速度・辞書の変更は次の文から反映されます。")
-                .font(.callout).foregroundStyle(.secondary)
             TabView(selection: $dictionary.tab) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -357,6 +354,10 @@ struct DictionarySettingsView: View {
                     }.font(.caption).foregroundStyle(.secondary)
                     ScrollView {
                         VStack(spacing: 8) {
+                            if dictionary.onlySpelling && !dictionary.checks.isEmpty && !dictionary.checks.contains(where: { $0.isSpelling && registered[$0.word.lowercased()] == nil }) {
+                                Text("絞り込みに一致する単語はありません。チェックを外すと取得した全単語を表示します。")
+                                    .font(.callout).foregroundStyle(.secondary).padding(12)
+                            }
                             ForEach($dictionary.checks) { $entry in
                                 if !dictionary.onlySpelling || (entry.isSpelling && registered[entry.word.lowercased()] == nil) {
                                     HStack {
@@ -389,13 +390,20 @@ struct DictionarySettingsView: View {
                     }
                     Text(dictionary.commonStatus).font(.callout).foregroundStyle(.secondary)
                     TextField("共通辞書を検索", text: $dictionary.commonSearch)
+                    HStack {
+                        Text("文字").frame(width: 180, alignment: .leading)
+                        Text("読み").frame(maxWidth: .infinity, alignment: .leading)
+                        Text("アクセント").frame(width: 70, alignment: .center)
+                        Color.clear.frame(width: 82, height: 1)
+                    }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
                     ScrollView {
                         LazyVStack(spacing: 6) {
                             ForEach(dictionary.commonEntries.filter { dictionary.commonSearch.isEmpty || $0.word.localizedCaseInsensitiveContains(dictionary.commonSearch) || $0.reading.contains(dictionary.commonSearch) }) { entry in
                                 HStack {
                                     Text(entry.word).frame(width: 180, alignment: .leading)
-                                    Text("\(entry.reading)（アクセント\(entry.accent)）").frame(maxWidth: .infinity, alignment: .leading)
-                                    Button("読みを修正") { dictionary.reset(); dictionary.word = entry.word; dictionary.reading = entry.reading; dictionary.accent = entry.accent; dictionary.priority = entry.priority; dictionary.tab = 0 }
+                                    Text(entry.reading).frame(maxWidth: .infinity, alignment: .leading)
+                                    Text("\(entry.accent)").monospacedDigit().frame(width: 70, alignment: .center)
+                                    Button("読みを修正") { dictionary.reset(); dictionary.word = entry.word; dictionary.reading = entry.reading; dictionary.accent = entry.accent; dictionary.priority = entry.priority; dictionary.tab = 0 }.frame(width: 82)
                                 }
                             }
                         }.padding(8)
