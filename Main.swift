@@ -290,9 +290,9 @@ extension Engine: SpeechEngine {}
                 guard !words.isEmpty else { dictionary.checks = []; dictionary.scanMessage = "英単語は見つかりませんでした。"; return }
                 _ = try await analyzer.start()
                 try Task.checkCancellation()
-                let results = try await analyzer.analyze(words: Array(words.prefix(200)), dictionary: [])
+                let results = try await analyzer.analyze(words: Array(words.prefix(200)), dictionary: dictionary.effectiveEntries)
                 try Task.checkCancellation()
-                dictionary.checks = results.sorted { $0.isSpelling && !$1.isSpelling }
+                dictionary.checks = expandWordChecks(results).sorted { $0.isSpelling && !$1.isSpelling }
                 dictionary.scanMessage = "\(results.count)語を確認しました。未登録のアルファベット読み候補：\(dictionary.pendingChecks.count)語。" + (words.count > 200 ? "先頭200語を解析しています。" : "")
             } catch {
                 if !Task.isCancelled { dictionary.scanMessage = error.localizedDescription }

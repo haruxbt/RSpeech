@@ -5,7 +5,7 @@ Safariで開いているページの本文を、VOICEVOXの同じ声で読み上
 
 ## ダウンロード
 
-**[最新版のダウンロード](https://github.com/haruxbt/RSpeech/releases/latest)** から `RSpeech-v1.4.2-macOS-arm64.zip` を取得してください。ソースコードのZIPではなく、Releases内のアプリ用ZIPを使います。
+**[最新版のダウンロード](https://github.com/haruxbt/RSpeech/releases/latest)** から `RSpeech-v1.4.3-macOS-arm64.zip` を取得してください。ソースコードのZIPではなく、Releases内のアプリ用ZIPを使います。
 
 1. ZIPを展開します。
 2. `RSpeech.app` を「アプリケーション」へコピーします。
@@ -32,7 +32,7 @@ Apple Silicon向けです。RTranslateでVOICEVOXデータを準備しておく�
 右下の歯車またはメニューの「設定…」を開きます。
 
 - **ワード追加・編集**：文字・かな読み・アクセント位置・優先度を指定して登録します。例：`ARTEX` → `アルテックス`。**「試聴」**で登録前に今選んでいる声・速度・アクセントを確認できます。試聴時は本文の再生を一時停止し、本文の▶で再開できます。試聴だけでは保存しません。編集・削除もできます。
-- **ページの英単語**：「現在のページの英単語を確認」を押すと、再生と同じ本文から英単語を拾い、VOICEVOXの標準の読みを表示します。同じページ・選択位置で再生用の本文を取得済みの場合は、その本文を再利用します。新しく取得する場合も再生と同じ処理を使います。
+- **ページの英単語**：「現在のページの英単語を確認」を押すと、再生と同じ本文から英単語を拾い、現在の辞書と複合語の補完を含む読みを表示します。同じページ・選択位置で再生用の本文を取得済みの場合は、その本文を再利用します。新しく取得する場合も再生と同じ処理を使います。
 - 共通・個人辞書に未登録で、アルファベットを1文字ずつ読む候補だけを表示します。登録済みの語や通常の読みがある語は表示しません。該当がない場合はその旨を表示します。
 - 「登録する読み」を必要な行に入力して、**「入力した読みをまとめて登録」**を押します。
 
@@ -45,7 +45,7 @@ CPUのように綴り読みで正しい単語もあるため、候補は誤読�
 
 [共通辞書JSON](Dictionary/common-ja.json)には、IT・プログラミング・AI・セキュリティ、ネットワークメーカー・製品名など789語の初期読みを用意しています。Intent / Planner / Write、put / get / read / write / post、Cisco / Catalyst / Palo Alto / Fortinet / Juniper / Arista / A10 / F5 / CrowdStrike / Zscaler / Infobloxなどを含みます。
 
-公開JSONは更新を継続しており、2026.11.17.1では850語です。Attack Surface / MITRE Att@ck / Tor / Dark Web / DoS / DDoSも含みます。
+公開JSONは更新を継続しており、2026.11.18.1では863語です。Attack Surface / MITRE Att@ck / Tor / Dark Web / DoS / DDoSも含みます。
 
 起動時にGitHubから公開JSONを確認し、検証してからこのMacへ保存します。通信に失敗したときは手元の共通辞書を使います。**同じ単語は個人辞書の登録を優先**するため、更新で自分の読みが上書きされません。
 
@@ -55,6 +55,12 @@ CPUのように綴り読みで正しい単語もあるため、候補は誤読�
 個人辞書を書き出してメンテナーへ提供すると、公開可能な語を確認したうえで読み・アクセント・優先度を標準側へ取り込めます。アプリによる個人辞書の自動送信はありません。
 
 RSpeech形式のJSON配列と、VOICEVOX EngineのUUID形式JSONの基本項目を取り込めます。RSpeechはVOICEVOX Coreを直接使うため、EngineのHTTPサーバーを起動する必要はありません。詳細・出典・編集方法は[共通辞書の説明](Dictionary/README.md)にあります。
+
+## 英単語をつなげた名前の読み
+
+全体が未登録の `OpenAPI` や `CyberStrikeAI` は、大小文字の切り替わり・略語・ハイフンなどで区切り、それぞれの辞書やVOICEVOXの英単語の読みをつなぎます。単語全体の登録を最優先し、本文の表示は変えません。`OpenAPI` → オープン＋エーピーアイ、`CyberStrikeAI` → サイバー＋ストライク＋エーアイ。
+
+読みが分からない部分だけを登録候補に表示します。すべて小文字の語や未知の略語は、境界を推測して無理に分割しません。部分の読みをつなぐため、自然なアクセントの調整は対象外です。全体の読みを登録すれば上書きできます。
 
 ## 文間の待ち時間
 
@@ -95,6 +101,7 @@ dist/RSpeech.app/Contents/MacOS/RSpeech --self-test
 dist/RSpeech.app/Contents/MacOS/RSpeech --audio-self-test
 python3 Tests/check_common_dictionary.py --app dist/RSpeech.app
 python3 Tests/check_word_scan.py --app dist/RSpeech.app
+python3 Tests/check_compounds.py --app dist/RSpeech.app
 ```
 
 再生状態・URL切替・取得失敗・取得中の停止/ページ遷移、タイトル除外・段落順序、辞書の保存・編集・一括登録、再生と次文合成の重なり、声・速度・辞書の途中変更などを検証します。

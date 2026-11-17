@@ -207,6 +207,9 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     try await Task.sleep(nanoseconds: 250_000_000)
     precondition(!previewReader.isPreviewAudioPlaying && !previewDictionary.previewing)
     print("Accent audition passes draft to synthesis without saving, pauses playback and cancels before resume")
+    precondition(englishWords("get_user_name OpenAPI") == ["get_user_name", "OpenAPI"])
+    let mixedChecks = try JSONDecoder().decode([WordCheck].self, from: Data(#"[{"word":"OpenQXZV","reading":"オープンキュウエックスズィイブイ","isSpelling":true,"unresolvedParts":[{"word":"QXZV","reading":"キュウエックスズィイブイ"}]},{"word":"QXZV","reading":"キュウエックスズィイブイ","isSpelling":true}]"#.utf8))
+    precondition(expandWordChecks(mixedChecks).map(\.word) == ["QXZV"], "Only unknown components appear, without duplicate entries")
     let wordSource = FakeSafari()
     let wordDictionary = ReadingDictionary(defaults: preferences)
     wordDictionary.checks = [

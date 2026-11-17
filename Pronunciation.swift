@@ -93,16 +93,27 @@ func pronunciation(_ text: String, entries: [ReadingEntry]) -> String {
     return result as String
 }
 
+struct WordPart: Decodable, Sendable { let word: String; let reading: String }
 struct WordCheck: Decodable, Identifiable, Sendable {
     var id: String { word }
     let word: String
     let reading: String
     let isSpelling: Bool
+    var unresolvedParts: [WordPart]? = nil
     var desiredReading = ""
-    enum CodingKeys: String, CodingKey { case word, reading, isSpelling }
+    enum CodingKeys: String, CodingKey { case word, reading, isSpelling, unresolvedParts }
+}
+func expandWordChecks(_ checks: [WordCheck]) -> [WordCheck] {
+    var seen = Set<String>()
+    return checks.flatMap { check -> [WordCheck] in
+        if let parts = check.unresolvedParts, !parts.isEmpty {
+            return parts.map { WordCheck(word: $0.word, reading: $0.reading, isSpelling: true) }
+        }
+        return [check]
+    }.filter { seen.insert($0.word.lowercased()).inserted }
 }
 func englishWords(_ text: String) -> [String] {
-    let regex = try! NSRegularExpression(pattern: "(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9]*(?:[-'][A-Za-z0-9]+)*(?![A-Za-z0-9_])")
+    let regex = try! NSRegularExpression(pattern: "(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9]*(?:[-_'][A-Za-z0-9]+)*(?![A-Za-z0-9_])")
     let value = text as NSString
     var seen = Set<String>()
     return regex.matches(in: text, range: NSRange(location: 0, length: value.length)).compactMap {
@@ -351,7 +362,7 @@ struct DictionarySettingsView: View {
                     Text(dictionary.scanMessage).font(.callout).foregroundStyle(.secondary)
                     HStack {
                         Text("文字").frame(width: 130, alignment: .leading)
-                        Text("VOICEVOX標準の読み").frame(maxWidth: .infinity, alignment: .leading)
+                        Text("現在の読み").frame(maxWidth: .infinity, alignment: .leading)
                         Text("登録する読み").frame(width: 190, alignment: .leading)
                     }.font(.caption).foregroundStyle(.secondary)
                     ScrollView {

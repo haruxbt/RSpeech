@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "2026.11.17.1",
+  "version": "2026.11.18.1",
   "description": "IT・プログラミング・AI開発・セキュリティの読み。読みは編集方針による日本語表記、アクセント0は平板の初期値。個人辞書が優先。",
   "sources": [
     {
@@ -8607,6 +8607,138 @@
       "id": "b3b98f7b-f667-573c-a6c5-c17830655f1d",
       "word": "Goals",
       "reading": "ゴールズ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "8e46c762-2868-5c21-8497-a0bdf4c200fd",
+      "word": "Cyber",
+      "reading": "サイバー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "ae6ee358-2b78-528c-83f4-836dae7d36e6",
+      "word": "Strike",
+      "reading": "ストライク",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "80f8d8b8-359e-56a4-9808-6c9462a53d93",
+      "word": "Fastener",
+      "reading": "ファスナー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "91e20b54-3685-550d-9d3f-6a4c5d192c55",
+      "word": "User",
+      "reading": "ユーザー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "mcp"
+      ]
+    },
+    {
+      "id": "965e47d8-d2b0-5f44-82bb-71b5e3243f9a",
+      "word": "Name",
+      "reading": "ネーム",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "mcp",
+        "javascript"
+      ]
+    },
+    {
+      "id": "8d998488-7660-575a-ae5a-66d1b61bdf89",
+      "word": "Parser",
+      "reading": "パーサー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "62f5c14f-e491-587c-b46b-c9e852b0373b",
+      "word": "Reader",
+      "reading": "リーダー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "2684431b-a08d-5988-b43c-2ac20fd5da60",
+      "word": "Writer",
+      "reading": "ライター",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "ee3f63db-5014-574b-ae14-00bea9bb3e30",
+      "word": "Helper",
+      "reading": "ヘルパー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "cc688051-a4ec-5091-9e5f-3eecedfaa641",
+      "word": "Mapper",
+      "reading": "マッパー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "ee7166bb-644a-5bc8-a223-9932eec2c30e",
+      "word": "Entity",
+      "reading": "エンティティ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "agents",
+        "http"
+      ]
+    },
+    {
+      "id": "ab5e3250-832a-5385-be28-9db5a26a9266",
+      "word": "Resolver",
+      "reading": "リゾルバー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "414fe5cb-111b-56d3-bc87-aa3b12c397e7",
+      "word": "Manager",
+      "reading": "マネージャー",
       "accent": 0,
       "priority": 5,
       "sources": [
