@@ -13,10 +13,11 @@ IT・プログラミング・AI開発・セキュリティ、ネットワーク�
 ## 更新
 
 1. `readings.tsv` の単語と読みを編集します。
-2. `build_dictionary.py` のversionを上げます。
-3. `python3 Dictionary/build_dictionary.py` でJSONを生成します。
-4. `Tests/check_common_dictionary.py --app ...` で全項目をVOICEVOX Coreで検証します。
-5. mainへ公開すると、アプリの次回起動時または「今すぐ更新」で取得されます。アプリの再配布は不要です。
+2. アクセント・優先度を変更する場合は `pronunciation-overrides.json` の同じ単語の値を更新します。個人辞書から取り込む場合も、読み・アクセント・優先度を上書きし、個人のUUIDや設定は公開しません。
+3. `build_dictionary.py` のversionを上げます。
+4. `python3 Dictionary/build_dictionary.py` でJSONを生成します。
+5. `Tests/check_common_dictionary.py --app ...` で全項目をVOICEVOX Coreで検証します。
+6. mainへ公開すると、アプリの次回起動時または「今すぐ更新」で取得されます。アプリの再配布は不要です。
 
 自動更新URL：
 https://raw.githubusercontent.com/haruxbt/RSpeech/main/Dictionary/common-ja.json
@@ -42,3 +43,7 @@ RSpeech形式のJSON配列、およびVOICEVOX Engineが書き出すUUIDをキ�
 ## 2026.11.16.2
 
 共通辞書を833語へ更新しました。Attack Surface / MITRE ATT&CK / MITRE Att@ck / Tor / Dark Web / DoS / DDoSを含みます。Torは利用者指定の「トア」です。アプリ1.3.0は同梱初期版789語から起動時にこのJSONへ更新します。アプリの再インストールは不要です。
+
+## 2026.11.17.1
+
+提供された18語の読み・アクセント・優先度を反映し、850語へ更新しました。個人のUUIDは取り込みません。RSpeech 1.4.0以降では、更新後に同一内容の個人登録を整理し、異なる読み・アクセント・優先度は保持します。

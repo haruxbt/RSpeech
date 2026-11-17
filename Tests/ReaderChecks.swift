@@ -4,16 +4,19 @@ actor FakeSafari: SafariSource {
     var fail = false
     var pageCalls = 0
     var delay: UInt64 = 0
+    var documentID: String?
+    var selectionID: String?
     func currentURL() async throws -> String { url }
+    func position() async throws -> PagePosition { PagePosition(url: url, documentID: documentID, selectionID: selectionID) }
     func page() async throws -> Page {
         pageCalls += 1
-        let snapshot = Page(url: url, text: text)
+        let snapshot = Page(url: url, text: text, documentID: documentID, selectionID: selectionID)
         if delay > 0 { try await Task.sleep(nanoseconds: delay) }
         if fail { throw ReaderError(message: "fixture fetch failed") }
         return snapshot
     }
-    func set(_ url: String, _ text: String, fail: Bool = false, delay: UInt64 = 0) {
-        self.url = url; self.text = text; self.fail = fail; self.delay = delay
+    func set(_ url: String, _ text: String, fail: Bool = false, delay: UInt64 = 0, documentID: String? = nil, selectionID: String? = nil) {
+        self.url = url; self.text = text; self.fail = fail; self.delay = delay; self.documentID = documentID; self.selectionID = selectionID
     }
 }
 final class FakeSpeech: SpeechEngine, @unchecked Sendable {
@@ -65,7 +68,7 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     dictionary.word = "Linux"; dictionary.reading = "誤更新"; dictionary.register()
     precondition(dictionary.entries == originalEntries, "Editing into a duplicate must preserve both entries")
     dictionary.reset()
-    let fixture = CommonDictionaryFile(schemaVersion: 1, version: "1.0", entries: [ReadingEntry(word: "PUT", reading: "プット"), ReadingEntry(word: "ARTEX", reading: "アルテックス")])
+    let fixture = CommonDictionaryFile(schemaVersion: 1, version: "1.0", entries: [ReadingEntry(word: "PUT", reading: "プット"), ReadingEntry(word: "ARTEX", reading: "アルテックス", accent: 1)])
     let commonData = try JSONEncoder().encode(fixture)
     try dictionary.applyCommon(commonData, persist: false)
     precondition(dictionary.effectiveEntries.contains(where: { $0.word == "PUT" }))
@@ -89,6 +92,29 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     let cached = ReadingDictionary(defaults: preferences, cacheURL: cacheURL)
     try cached.applyCommon(commonData)
     precondition(ReadingDictionary(defaults: preferences, cacheURL: cacheURL).commonVersion == "1.0", "Offline cache must load on restart")
+    let cleanupPreferences = UserDefaults(suiteName: suite + "cleanup")!
+    defer { cleanupPreferences.removePersistentDomain(forName: suite + "cleanup") }
+    let cleanup = ReadingDictionary(defaults: cleanupPreferences, cacheURL: cacheDirectory.appendingPathComponent("cleanup.json"))
+    try cleanup.importJSON(try JSONEncoder().encode([
+        ReadingEntry(word: "Match", reading: "まっち", accent: 1),
+        ReadingEntry(word: "Accent", reading: "アクセント", accent: 2),
+        ReadingEntry(word: "Priority", reading: "プライオリティ", priority: 9),
+        ReadingEntry(word: "Reading", reading: "リーディング"),
+        ReadingEntry(word: "Private", reading: "プライベート")]))
+    let cleanupData = try JSONEncoder().encode(CommonDictionaryFile(schemaVersion: 1, version: "2.0", entries: [
+        ReadingEntry(word: "MATCH", reading: "マッチ", accent: 1),
+        ReadingEntry(word: "Accent", reading: "アクセント", accent: 0),
+        ReadingEntry(word: "Priority", reading: "プライオリティ", priority: 5),
+        ReadingEntry(word: "Reading", reading: "リード")]))
+    try cleanup.applyCommon(cleanupData)
+    precondition(cleanup.entries.count == 4 && !cleanup.entries.contains(where: { $0.word == "Match" }))
+    precondition(cleanup.effectiveEntries.first(where: { $0.word == "Accent" })?.accent == 2)
+    precondition(cleanup.effectiveEntries.first(where: { $0.word == "Priority" })?.priority == 9)
+    precondition(ReadingDictionary(defaults: cleanupPreferences, cacheURL: cacheDirectory.appendingPathComponent("cleanup.json")).entries.count == 4)
+    // A cached dictionary also deduplicates on launch, before any network update.
+    try cleanup.importJSON(try JSONEncoder().encode([ReadingEntry(word: "Match", reading: "マッチ", accent: 1)]))
+    precondition(ReadingDictionary(defaults: cleanupPreferences, cacheURL: cacheDirectory.appendingPathComponent("cleanup.json")).entries.count == 4)
+    print("Matching personal entries removed and persisted; differing reading/accent/priority and private words retained")
     print("Common JSON validation, personal override, import/export, engine JSON, cache restart and rollback checks passed")
     let source = FakeSafari()
     let reader = Reader(safari: source, muted: true, dictionary: dictionary, preferences: preferences, makeEngine: { FakeSpeech() })
@@ -125,6 +151,54 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     try await waitFor { !reader.fetching }
     precondition(reader.text.isEmpty && !reader.busy, "Navigation during extraction must not cache stale content")
     reader.stop()
+    let selectedSource = FakeSafari()
+    await selectedSource.set("https://example.test/selected", "選択した位置からの本文。", documentID: "doc1", selectionID: "sel1")
+    let selectedReader = Reader(safari: selectedSource, muted: true, preferences: preferences, makeEngine: { FakeSpeech() })
+    selectedReader.toggle(); try await waitFor { selectedReader.busy && !selectedReader.fetching }
+    selectedReader.toggle(); selectedReader.toggle(); try await waitFor { !selectedReader.paused && !selectedReader.fetching }
+    let unchangedCount = await selectedSource.pageCalls; precondition(unchangedCount == 1)
+    selectedReader.toggle()
+    await selectedSource.set("https://example.test/selected", "別の選択位置から。", documentID: "doc1", selectionID: "sel2")
+    selectedReader.toggle(); try await waitFor { !selectedReader.fetching && selectedReader.text == "別の選択位置から。" }
+    let changedCount = await selectedSource.pageCalls; precondition(changedCount == 2)
+    selectedReader.toggle()
+    await selectedSource.set("https://example.test/selected", "全体の本文。", documentID: "doc1")
+    selectedReader.toggle(); try await waitFor { !selectedReader.paused && !selectedReader.fetching }
+    precondition(selectedReader.text == "別の選択位置から。", "Clearing selection during pause must preserve resume")
+    selectedReader.stop(); selectedReader.toggle()
+    try await waitFor { !selectedReader.fetching && selectedReader.text == "全体の本文。" }
+    selectedReader.toggle()
+    await selectedSource.set("https://example.test/selected", "再読込した本文。", documentID: "doc2")
+    selectedReader.toggle(); try await waitFor { !selectedReader.fetching && selectedReader.text == "再読込した本文。" }
+    selectedReader.stop()
+    await selectedSource.set("https://example.test/selected", "古い選択。", delay: 150_000_000, documentID: "doc2", selectionID: "sel3")
+    selectedReader.toggle(); try await Task.sleep(nanoseconds: 50_000_000)
+    await selectedSource.set("https://example.test/selected", "新しい選択。", documentID: "doc2", selectionID: "sel4")
+    try await waitFor { !selectedReader.fetching }
+    precondition(selectedReader.text.isEmpty && !selectedReader.busy)
+    selectedReader.stop()
+    print("Selection resume, same-URL reselection, clear, document reload and selection-race checks passed")
+    let previewDictionary = ReadingDictionary(defaults: cleanupPreferences)
+    previewDictionary.word = "Preview"; previewDictionary.reading = "プレビュー"; previewDictionary.accent = 2
+    let savedBeforePreview = previewDictionary.entries
+    var previewRequests: [(String, Int, Double, Bool)] = []
+    var previewReader: Reader!
+    previewReader = Reader(safari: FakeSafari(), muted: true, dictionary: previewDictionary, preferences: preferences, makeEngine: {
+        FakeSpeech { text, voice, rate in previewRequests.append((text, voice, rate, previewReader.isAudioPlaying)) }
+    })
+    previewReader.toggle(); try await waitFor { previewReader.isAudioPlaying }
+    previewReader.previewPronunciation()
+    precondition(previewReader.paused)
+    try await waitFor { previewReader.isPreviewAudioPlaying }
+    precondition(previewRequests.last!.0 == "プレビュー" && !previewRequests.last!.3)
+    precondition(previewDictionary.entries == savedBeforePreview, "Audition must never register the draft")
+    previewReader.toggle(); try await waitFor { !previewReader.paused && !previewReader.fetching }
+    precondition(!previewReader.isPreviewAudioPlaying && !previewDictionary.previewing)
+    previewReader.stop()
+    previewReader.previewPronunciation(); previewReader.stopPronunciationPreview()
+    try await Task.sleep(nanoseconds: 250_000_000)
+    precondition(!previewReader.isPreviewAudioPlaying && !previewDictionary.previewing)
+    print("Accent audition passes draft to synthesis without saving, pauses playback and cancels before resume")
     // Observe the actual AVAudioPlayer state when the next synthesis starts.
     let pipelineSource = FakeSafari()
     let first = "最初の文章を読みながら次の音声を準備するための確認です。"

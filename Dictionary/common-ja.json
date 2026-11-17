@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "2026.11.16.2",
+  "version": "2026.11.17.1",
   "description": "IT・プログラミング・AI開発・セキュリティの読み。読みは編集方針による日本語表記、アクセント0は平板の初期値。個人辞書が優先。",
   "sources": [
     {
@@ -8436,6 +8436,177 @@
       "id": "f10ea59c-0cd2-59fb-8a5b-556fd2ce3c69",
       "word": "Supply Chain",
       "reading": "サプライチェーン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "28a8c5d2-ef49-5107-90a9-62e2534ecb17",
+      "word": "JPCERT",
+      "reading": "ジェーピーサート",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "379f02ec-e8ea-5250-a5a2-69d29290191d",
+      "word": "Cairn",
+      "reading": "ケルン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "15be098a-6741-5641-b025-d8eb22de6ef6",
+      "word": "Intelligence",
+      "reading": "インテリジェンス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "dc7c5c93-1361-5771-95a5-72673150da6d",
+      "word": "Tencent",
+      "reading": "テンセント",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "747a97c1-e951-5969-a451-bd6cf27e96aa",
+      "word": "Cloud",
+      "reading": "クラウド",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "security",
+        "agents"
+      ]
+    },
+    {
+      "id": "dec2db7e-e0ba-546a-8fc7-4ded697c52ac",
+      "word": "Dispatcher",
+      "reading": "ディスパッチャー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "31b6adb1-c0a7-5977-8267-233b9c71f9d9",
+      "word": "README",
+      "reading": "リードミー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "06a4c91d-a4be-5feb-9c6f-0faa2c24a702",
+      "word": "goal",
+      "reading": "ゴール",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "baa18e14-acec-56ce-8fd4-db7a8fcbd961",
+      "word": "fact",
+      "reading": "ファクト",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "ca6216dd-a18d-5499-9047-0631ca228642",
+      "word": "Architecture",
+      "reading": "アーキテクチャー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "mcp"
+      ]
+    },
+    {
+      "id": "bd44cc8c-3ba5-5026-8f2b-22810aca19ae",
+      "word": "feature",
+      "reading": "フィーチャー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "mcp"
+      ]
+    },
+    {
+      "id": "5e538d40-176d-53ac-be4f-f0a6e4642282",
+      "word": "Strix",
+      "reading": "ストリックス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "91c487a7-4cbf-5c2c-94c8-c7d6d9446a0e",
+      "word": "Hermes",
+      "reading": "ヘルメス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "b8a32b8d-b271-5abe-8779-05c981f5c734",
+      "word": "Unit 42",
+      "reading": "ユニットフォーティーツー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "50ba1b94-8a4e-514e-abb6-bbdefb17ef7e",
+      "word": "Mandiant",
+      "reading": "マンディアント",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "b1f10c10-db56-5d28-b7ed-a39aea12e22e",
+      "word": "Wiz",
+      "reading": "ウィズ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "b3b98f7b-f667-573c-a6c5-c17830655f1d",
+      "word": "Goals",
+      "reading": "ゴールズ",
       "accent": 0,
       "priority": 5,
       "sources": [

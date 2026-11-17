@@ -122,20 +122,40 @@ final class Engine: @unchecked Sendable {
     deinit { close() }
 }
 
-struct Page: Codable, Sendable { let url: String; let text: String }
+struct Page: Codable, Sendable {
+    let url: String
+    let text: String
+    var documentID: String? = nil
+    var selectionID: String? = nil
+}
+struct PagePosition: Codable, Sendable {
+    let url: String
+    var documentID: String? = nil
+    var selectionID: String? = nil
+    func matches(_ page: Page) -> Bool {
+        url == page.url && documentID == page.documentID && selectionID == page.selectionID
+    }
+}
 protocol SafariSource: Sendable {
     func currentURL() async throws -> String
     func page() async throws -> Page
+    func wholePage() async throws -> Page
+    func position() async throws -> PagePosition
+}
+extension SafariSource {
+    func position() async throws -> PagePosition { PagePosition(url: try await currentURL()) }
+    func wholePage() async throws -> Page { try await page() }
 }
 struct SafariSourceLive: SafariSource {
     private func execute(_ source: String) async throws -> String {
         try await Task.detached {
             var error: NSDictionary?
-            guard let script = NSAppleScript(source: source) else { throw ReaderError(message: "Safariの取得処理を作成できませんでした。") }
+            guard let script = NSAppleScript(source: "with timeout of 12 seconds\n" + source + "\nend timeout") else { throw ReaderError(message: "Safariの取得処理を作成できませんでした。") }
             let reply = script.executeAndReturnError(&error)
             if let error {
                 let number = error[NSAppleScript.errorNumber] as? Int ?? 0
                 if number == -1743 { throw ReaderError(message: "システム設定 → プライバシーとセキュリティ → オートメーションで、RSpeechによるSafariの操作を許可してください。") }
+                if number == -1712 { throw ReaderError(message: "Safariの応答がありません。Safariでページを表示して、もう一度 ▶ を押してください。") }
                 if number == -1728 { throw ReaderError(message: "SafariでWebページを開いてください。") }
                 throw ReaderError(message: "Safariから取得できませんでした。Safariの開発メニューで「Apple EventsからのJavaScriptを許可」を確認してください。")
             }
@@ -147,15 +167,32 @@ struct SafariSourceLive: SafariSource {
         guard !url.isEmpty else { throw ReaderError(message: "SafariでWebページを開いてください。") }
         return url
     }
-    func page() async throws -> Page {
-        let javascript = try String(contentsOf: Bundle.main.url(forResource: "PageExtraction", withExtension: "js")!, encoding: .utf8)
-        let escaped = javascript.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        let json = try await execute("tell application \"Safari\" to do JavaScript \"\(escaped)\" in current tab of front window")
+    private func javascript(_ source: String) async throws -> String {
+        let escaped = source.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        return try await execute("tell application \"Safari\" to do JavaScript \"\(escaped)\" in current tab of front window")
+    }
+    private func selectionScript() throws -> String {
+        try String(contentsOf: Bundle.main.url(forResource: "PageSelection", withExtension: "js")!, encoding: .utf8)
+    }
+    func position() async throws -> PagePosition {
+        let json = try await javascript(selectionScript())
+        guard let data = json.data(using: .utf8), let position = try? JSONDecoder().decode(PagePosition.self, from: data) else {
+            throw ReaderError(message: "Safariの選択位置を取得できませんでした。")
+        }
+        return position
+    }
+    private func extract(respectSelection: Bool) async throws -> Page {
+        let extractor = try String(contentsOf: Bundle.main.url(forResource: "PageExtraction", withExtension: "js")!, encoding: .utf8)
+        let source = try selectionScript() + ";\n" + extractor + "(" + (respectSelection ? "true" : "false") + ")"
+        let json = try await javascript(source)
         guard let data = json.data(using: .utf8), let page = try? JSONDecoder().decode(Page.self, from: data) else {
             throw ReaderError(message: "ページの本文を取得できませんでした。")
         }
         return page
     }
+    func page() async throws -> Page { try await extract(respectSelection: true) }
+    func wholePage() async throws -> Page { try await extract(respectSelection: false) }
+
 }
 protocol SpeechEngine: AnyObject, Sendable {
     func start() async throws -> [Voice]
@@ -172,7 +209,9 @@ extension Engine: SpeechEngine {}
 @MainActor final class Reader: ObservableObject {
     @Published private(set) var text = ""
     @Published private(set) var pageURL: String?
-    @Published var status = "Safariでページを開いて ▶ を押してください。"
+    private var documentID: String?
+    private var selectionID: String?
+    @Published var status = "Safariの本文を選択して ▶ を押すと、その位置から読みます。"
     @Published var voices: [Voice] = []
     @Published var expanded = false
     @Published var speaker: Int { didSet { preferences.set(speaker, forKey: "speaker"); settingsChanged() } }
@@ -202,6 +241,12 @@ extension Engine: SpeechEngine {}
     private var engineReady = false
     private var wordCheckTask: Task<Void, Never>?
     private var wordCheckEngine: Engine?
+    private var previewTask: Task<Void, Never>?
+    private var previewPlayer: AVAudioPlayer?
+    private var previewEngine: (any SpeechEngine)?
+    private var ownsPreviewEngine = false
+    private var previewGeneration = UUID()
+    var isPreviewAudioPlaying: Bool { previewPlayer?.isPlaying ?? false }
     var isAudioPlaying: Bool { player?.isPlaying ?? false }
 
     init(safari: any SafariSource = SafariSourceLive(), muted: Bool = false, dictionary: ReadingDictionary? = nil, preferences: UserDefaults = .standard, makeEngine: @escaping () -> any SpeechEngine = { Engine() }) {
@@ -219,7 +264,7 @@ extension Engine: SpeechEngine {}
             let analyzer = Engine(); wordCheckEngine = analyzer
             defer { analyzer.close(); wordCheckEngine = nil; dictionary.checking = false }
             do {
-                let page = try await safari.page()
+                let page = try await safari.wholePage()
                 try Task.checkCancellation()
                 let words = englishWords(page.text)
                 guard !words.isEmpty else { dictionary.checks = []; dictionary.scanMessage = "英単語は見つかりませんでした。"; return }
@@ -236,7 +281,55 @@ extension Engine: SpeechEngine {}
         }
     }
     func cancelWordCheck() { wordCheckTask?.cancel(); wordCheckEngine?.close() }
+    func stopPronunciationPreview() {
+        previewGeneration = UUID(); previewTask?.cancel(); previewTask = nil
+        previewPlayer?.stop(); previewPlayer = nil
+        if ownsPreviewEngine { previewEngine?.close() }
+        previewEngine = nil; ownsPreviewEngine = false; dictionary.previewing = false
+    }
+    func previewPronunciation() {
+        if dictionary.previewing { stopPronunciationPreview(); dictionary.previewStatus = "試聴を停止しました。"; return }
+        let draft: ReadingEntry
+        do { draft = try dictionary.draftEntry() }
+        catch { dictionary.previewStatus = error.localizedDescription; return }
+        // An audition replaces an in-flight fetch so it cannot start page audio behind the preview.
+        fetchGeneration = UUID(); fetching = false
+        if busy && !paused { paused = true; player?.pause(); status = "一時停止中" }
+        let id = UUID(); previewGeneration = id
+        let voice = speaker, rate = speed
+        let borrowed = engineReady ? engine : nil
+        let audition = borrowed ?? makeEngine()
+        previewEngine = audition; ownsPreviewEngine = borrowed == nil
+        dictionary.previewing = true; dictionary.previewStatus = "試聴の音声を準備中…"
+        previewTask = Task {
+            defer {
+                if previewGeneration == id {
+                    if ownsPreviewEngine { audition.close() }
+                    previewEngine = nil; ownsPreviewEngine = false; previewPlayer = nil
+                    dictionary.previewing = false; previewTask = nil
+                }
+            }
+            do {
+                if borrowed == nil { _ = try await audition.start() }
+                try Task.checkCancellation()
+                let data = try await audition.synthesize(draft.word, speaker: voice, speed: rate, dictionary: [draft])
+                guard previewGeneration == id else { return }
+                try Task.checkCancellation()
+                let audio = try AVAudioPlayer(data: data)
+                previewPlayer = audio
+                if muted { audio.volume = 0 }
+                audio.prepareToPlay()
+                guard audio.play() else { throw ReaderError(message: "試聴を再生できませんでした。") }
+                dictionary.previewStatus = "試聴中（アクセント\(draft.accent)）"
+                while audio.isPlaying { try await Task.sleep(nanoseconds: 10_000_000) }
+                dictionary.previewStatus = "試聴が終わりました。追加・更新すると保存されます。"
+            } catch {
+                if previewGeneration == id && !Task.isCancelled { dictionary.previewStatus = error.localizedDescription }
+            }
+        }
+    }
     func toggle() {
+        stopPronunciationPreview()
         guard !fetching else { return }
         if busy && !paused {
             paused = true; player?.pause(); status = "一時停止中"; return
@@ -245,23 +338,26 @@ extension Engine: SpeechEngine {}
         Task {
             defer { if fetchGeneration == request { fetching = false } }
             do {
-                let url = try await safari.currentURL()
+                let position = try await safari.position()
                 guard fetchGeneration == request else { return }
-                if url != pageURL || text.isEmpty {
+                let newDocument = position.documentID != nil && position.documentID != documentID
+                let newSelection = position.selectionID != nil && position.selectionID != selectionID
+                let clearedOnRestart = !busy && selectionID != nil && position.selectionID == nil
+                if position.url != pageURL || newDocument || newSelection || clearedOnRestart || text.isEmpty {
                     // Clear the old page before fetching; a failed fetch must not resume old speech.
-                    stopPlayback(); text = ""; pageURL = nil
+                    stopPlayback(); text = ""; pageURL = nil; documentID = nil; selectionID = nil
                     status = "Safariから本文を取得中…"
                     let page = try await safari.page()
                     guard fetchGeneration == request else { return }
                     // The tab may have navigated while JavaScript was extracting the page.
-                    guard try await safari.currentURL() == page.url else {
-                        throw ReaderError(message: "取得中にページが切り替わりました。もう一度 ▶ を押してください。")
+                    guard try await safari.position().matches(page) else {
+                        throw ReaderError(message: "取得中にページまたは選択位置が変わりました。もう一度 ▶ を押してください。")
                     }
                     guard fetchGeneration == request else { return }
                     guard !page.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                         throw ReaderError(message: "読み上げられる本文がありません。")
                     }
-                    text = page.text; pageURL = page.url
+                    text = page.text; pageURL = page.url; documentID = page.documentID; selectionID = page.selectionID
                 }
                 guard fetchGeneration == request else { return }
                 if busy && paused {
@@ -372,6 +468,7 @@ extension Engine: SpeechEngine {}
         engine?.close(); engine = nil; busy = false; paused = false
     }
     func stop() {
+        stopPronunciationPreview()
         fetchGeneration = UUID(); fetching = false
         stopPlayback(); status = "停止しました。"
     }
@@ -411,7 +508,7 @@ struct ContentView: View {
     }
 }
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let dictionary = ReadingDictionary(shared: true)
     lazy var reader = Reader(dictionary: dictionary)
     var settingsWindow: NSWindow?
@@ -455,10 +552,14 @@ struct ContentView: View {
         if settingsWindow == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 530), styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "RSpeech 設定"; window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: DictionarySettingsView(dictionary: dictionary, checkPage: { [weak self] in self?.reader.checkPageWords() })); window.center()
+            window.contentView = NSHostingView(rootView: DictionarySettingsView(dictionary: dictionary, checkPage: { [weak self] in self?.reader.checkPageWords() }, preview: { [weak self] in self?.reader.previewPronunciation() })); window.center()
+            window.delegate = self
             settingsWindow = window
         }
         NSApp.activate(ignoringOtherApps: true); settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+    func windowWillClose(_ notification: Notification) {
+        if let closing = notification.object as? NSWindow, closing === settingsWindow { reader.stopPronunciationPreview() }
     }
     @objc func show() { NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil) }
     @objc func fetch() { show(); reader.toggle() }

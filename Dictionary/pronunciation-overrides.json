@@ -1,0 +1,74 @@
+{
+  "jpcert": {
+    "accent": 0,
+    "priority": 5
+  },
+  "cairn": {
+    "accent": 0,
+    "priority": 5
+  },
+  "intelligence": {
+    "accent": 0,
+    "priority": 5
+  },
+  "tencent": {
+    "accent": 0,
+    "priority": 5
+  },
+  "cloud": {
+    "accent": 0,
+    "priority": 5
+  },
+  "dispatcher": {
+    "accent": 0,
+    "priority": 5
+  },
+  "osint": {
+    "accent": 0,
+    "priority": 5
+  },
+  "readme": {
+    "accent": 0,
+    "priority": 5
+  },
+  "goal": {
+    "accent": 0,
+    "priority": 5
+  },
+  "fact": {
+    "accent": 0,
+    "priority": 5
+  },
+  "architecture": {
+    "accent": 0,
+    "priority": 5
+  },
+  "feature": {
+    "accent": 0,
+    "priority": 5
+  },
+  "strix": {
+    "accent": 0,
+    "priority": 5
+  },
+  "hermes": {
+    "accent": 0,
+    "priority": 5
+  },
+  "unit 42": {
+    "accent": 0,
+    "priority": 5
+  },
+  "mandiant": {
+    "accent": 0,
+    "priority": 5
+  },
+  "wiz": {
+    "accent": 0,
+    "priority": 5
+  },
+  "goals": {
+    "accent": 0,
+    "priority": 5
+  }
+}

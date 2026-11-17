@@ -122,6 +122,8 @@ func englishWords(_ text: String) -> [String] {
     @Published private(set) var commonEntries: [ReadingEntry] = []
     @Published private(set) var commonVersion = ""
     @Published var commonStatus = "共通辞書を準備中…"
+    @Published var previewing = false
+    @Published var previewStatus = ""
     @Published var updating = false
     @Published var commonSearch = ""
     @Published var autoUpdate: Bool { didSet { defaults.set(autoUpdate, forKey: "commonDictionaryAutoUpdate") } }
@@ -156,6 +158,26 @@ func englishWords(_ text: String) -> [String] {
             do { entries = try JSONDecoder().decode([ReadingEntry].self, from: data) }
             catch { writable = false; message = "保存済みの辞書を読み込めません。元データを保護するため変更を保存しません。" }
         }
+        if writable { _ = try? pruneCommonMatches() }
+    }
+    func draftEntry() throws -> ReadingEntry {
+        let entry = ReadingEntry(word: word.trimmingCharacters(in: .whitespacesAndNewlines), reading: kanaReading(reading), accent: accent, priority: priority)
+        try validateReadings([entry])
+        return entry
+    }
+    // UUIDs identify local rows; pronunciation equality ignores row identity and English case.
+    private func pruneCommonMatches() throws -> Int {
+        let common = Dictionary(commonEntries.map { ($0.word.lowercased(), $0) }, uniquingKeysWith: { _, new in new })
+        let kept = entries.filter { entry in
+            guard let standard = common[entry.word.lowercased()] else { return true }
+            return kanaReading(entry.reading) != kanaReading(standard.reading) || entry.accent != standard.accent || entry.priority != standard.priority
+        }
+        let removed = entries.count - kept.count
+        if removed > 0 {
+            try save(kept)
+            if let id = editingID, !kept.contains(where: { $0.id == id }) { reset() }
+        }
+        return removed
     }
     private func save(_ updated: [ReadingEntry]) throws {
         guard writable else { throw ReaderError(message: "辞書を読み込めないため保存できません。") }
@@ -199,7 +221,8 @@ func englishWords(_ text: String) -> [String] {
         }
         let before = effectiveEntries
         commonEntries = file.entries; commonVersion = file.version
-        commonStatus = "共通辞書 \(file.version)・\(file.entries.count)語（個人登録が優先）"
+        let removed = try pruneCommonMatches()
+        commonStatus = "共通辞書 \(file.version)・\(file.entries.count)語（個人登録が優先）" + (removed > 0 ? "・一致した個人登録\(removed)件を整理しました" : "")
         if before != effectiveEntries { onChange?() }
     }
     func updateCommon() {
@@ -280,6 +303,7 @@ func englishWords(_ text: String) -> [String] {
 struct DictionarySettingsView: View {
     @ObservedObject var dictionary: ReadingDictionary
     var checkPage: () -> Void = {}
+    var preview: () -> Void = {}
     var body: some View {
         let registered = Dictionary(dictionary.effectiveEntries.map { ($0.word.lowercased(), $0) }, uniquingKeysWith: { _, new in new })
         return VStack(alignment: .leading, spacing: 12) {
@@ -298,7 +322,10 @@ struct DictionarySettingsView: View {
                     HStack {
                         Stepper("アクセント：\(dictionary.accent)（0＝平板）", value: $dictionary.accent, in: 0...max(0, readingMoras(kanaReading(dictionary.reading))))
                         Stepper("優先度：\(dictionary.priority)", value: $dictionary.priority, in: 0...10)
+                        Button(dictionary.previewing ? "試聴を停止" : "試聴") { preview() }
+                            .disabled(!dictionary.previewing && (dictionary.word.isEmpty || dictionary.reading.isEmpty))
                     }.font(.callout)
+                    if !dictionary.previewStatus.isEmpty { Text(dictionary.previewStatus).font(.caption).foregroundStyle(.secondary) }
                     ScrollView {
                         VStack(spacing: 0) {
                             ForEach(dictionary.entries) { entry in
@@ -367,7 +394,7 @@ struct DictionarySettingsView: View {
                             ForEach(dictionary.commonEntries.filter { dictionary.commonSearch.isEmpty || $0.word.localizedCaseInsensitiveContains(dictionary.commonSearch) || $0.reading.contains(dictionary.commonSearch) }) { entry in
                                 HStack {
                                     Text(entry.word).frame(width: 180, alignment: .leading)
-                                    Text(entry.reading).frame(maxWidth: .infinity, alignment: .leading)
+                                    Text("\(entry.reading)（アクセント\(entry.accent)）").frame(maxWidth: .infinity, alignment: .leading)
                                     Button("読みを修正") { dictionary.reset(); dictionary.word = entry.word; dictionary.reading = entry.reading; dictionary.accent = entry.accent; dictionary.priority = entry.priority; dictionary.tab = 0 }
                                 }
                             }
