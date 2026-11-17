@@ -45,5 +45,25 @@ const separate=page('<article><p>'+('長い別記事です。'.repeat(30))+'</p>
 separate.select(separate.d.querySelector('#short').firstChild,2);
 assert.equal(separate.extract().text,'選択記事です。\n最後です。');
 assert.notEqual(separate.position().documentID,p.position().documentID);
+// A related-articles boundary stops all following content, including later siblings.
+assert.equal(extract('<article><p>本文です。</p><section><h2>関連記事</h2><a>別の記事</a></section><p>後続の広告</p></article>').text,'本文です。');
+assert.equal(extract('<main><p>本文です。</p><div><span> 関連記事： </span></div><p>別の記事</p></main>').text,'本文です。');
+assert.equal(extract('<article><p>本文です。</p><div class="related-posts"><a>別の記事</a></div><p>広告</p></article>').text,'本文です。');
+assert.equal(extract('<article><p>関連記事を参考に説明します。</p><p>この後も本文です。</p></article>').text,'関連記事を参考に説明します。\nこの後も本文です。');
+assert.equal(extract('<article><p><strong>関連記事</strong>も参考にします。</p><p>続きです。</p></article>').text,'関連記事も参考にします。\n続きです。');
+assert.equal(extract('<article><p>本文です。</p><h2 hidden>関連記事</h2><p>続きです。</p><aside><h2>関連記事</h2></aside><p>最後です。</p></article>').text,'本文です。\n続きです。\n最後です。');
+assert.equal(extract('<article><p>本文です。</p><h3>Related Articles</h3><p>Other</p></article>').text,'本文です。');
+const relatedSelection=page('<article><p id="selected">前半。開始から本文です。</p><h2>関連記事</h2><p id="related">別の記事です。</p></article>');
+relatedSelection.select(relatedSelection.d.querySelector('#selected').firstChild,3);
+assert.equal(relatedSelection.extract().text,'開始から本文です。');
+relatedSelection.select(relatedSelection.d.querySelector('#related').firstChild,0);
+assert.equal(relatedSelection.extract().text,'','Selection after the boundary must not read recommendations');
+console.log('Related-section cutoff checks passed: headings, labels, wrappers, selection, inline mentions and hidden/sidebar exclusions');
+assert.equal(extract('<article><p>本文です。</p><figure><img alt="読まないALT" src="test.png"><figcaption>画像の説明。出典：画像元</figcaption></figure><p>本文の続きです。</p></article>').text,'本文です。\n本文の続きです。');
+assert.equal(extract('<article><p>本文です。</p><div class="wp-caption"><img alt="不要"><p class="wp-caption-text">説明</p></div><p class="photo-credit">写真のクレジット</p><div itemprop="caption">画像の説明</div><p>出典：画像元</p><small>© 2026 Example</small><p>Copyright (c) Example</p><p>最後です。</p></article>').text,'本文です。\n最後です。');
+assert.equal(extract('<article><p>本文です。</p><figure><img alt="不要"><div class="caption">画像説明</div><div class="credits">提供者</div></figure><svg><title>読まない図のタイトル</title><text>図の文字</text></svg><div role="img" aria-label="説明">画像の代替説明</div><p>続きです。</p></article>').text,'本文です。\n続きです。');
+assert.equal(extract('<article><p>出典を調べる方法を説明します。</p><p>Copyrightの仕組みを説明します。</p><div class="caption">画像ではない本文です。</div><p>続きです。</p></article>').text,'出典を調べる方法を説明します。\nCopyrightの仕組みを説明します。\n画像ではない本文です。\n続きです。');
+assert.equal(extract('<article><div><p>出典：テスト</p><p>残す本文です。</p></div><img alt="不要"><p class="caption">画像説明</p><p>最後です。</p></article>').text,'残す本文です。\n最後です。');
+console.log('Image metadata checks passed: captions, attribution, copyright, ALT and image descriptions omitted; ordinary prose retained');
 for(const w of windows)w.close();
 console.log('Extraction checks passed: title/navigation/hidden exclusion, selection tails, backward drag, element offsets, duplicate text, article roots and selection identity');

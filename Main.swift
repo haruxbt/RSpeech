@@ -293,8 +293,7 @@ extension Engine: SpeechEngine {}
                 let results = try await analyzer.analyze(words: Array(words.prefix(200)), dictionary: [])
                 try Task.checkCancellation()
                 dictionary.checks = results.sorted { $0.isSpelling && !$1.isSpelling }
-                let registered = Set(dictionary.effectiveEntries.map { $0.word.lowercased() })
-                dictionary.scanMessage = "\(results.count)語を確認しました。未登録の綴り読み候補：\(results.filter { $0.isSpelling && !registered.contains($0.word.lowercased()) }.count)語。" + (words.count > 200 ? "先頭200語を表示しています。" : "")
+                dictionary.scanMessage = "\(results.count)語を確認しました。未登録のアルファベット読み候補：\(dictionary.pendingChecks.count)語。" + (words.count > 200 ? "先頭200語を解析しています。" : "")
             } catch {
                 if !Task.isCancelled { dictionary.scanMessage = error.localizedDescription }
             }

@@ -70,7 +70,7 @@ shutil.copy2(here / 'PageExtraction.js', resources / 'PageExtraction.js')
 shutil.copy2(here / 'PageSelection.js', resources / 'PageSelection.js')
 shutil.copy2(here / 'Dictionary/common-ja.json', resources / 'common-ja.json')
 (resources / 'runtime.json').write_text(json.dumps({'python': 'Python/bin/python3.13', 'runtime': str(runtime.relative_to(resources))}))
-info = {'CFBundleIdentifier': 'local.flop.RSpeech', 'CFBundleName': 'RSpeech', 'CFBundleDisplayName': 'RSpeech', 'CFBundleExecutable': 'RSpeech', 'CFBundlePackageType': 'APPL', 'CFBundleIconFile': 'RSpeech.icns', 'CFBundleShortVersionString': '1.4.1', 'CFBundleVersion': '8', 'LSMinimumSystemVersion': '14.0', 'NSHighResolutionCapable': True, 'NSAppleEventsUsageDescription': 'Safariの現在のページの本文を取得して、端末内のVOICEVOXで読み上げます。'}
+info = {'CFBundleIdentifier': 'local.flop.RSpeech', 'CFBundleName': 'RSpeech', 'CFBundleDisplayName': 'RSpeech', 'CFBundleExecutable': 'RSpeech', 'CFBundlePackageType': 'APPL', 'CFBundleIconFile': 'RSpeech.icns', 'CFBundleShortVersionString': '1.4.2', 'CFBundleVersion': '9', 'LSMinimumSystemVersion': '14.0', 'NSHighResolutionCapable': True, 'NSAppleEventsUsageDescription': 'Safariの現在のページの本文を取得して、端末内のVOICEVOXで読み上げます。'}
 with (contents / 'Info.plist').open('wb') as f:
     plistlib.dump(info, f)
 # The standalone interpreter has no libpython dependency. Do not ship its unused

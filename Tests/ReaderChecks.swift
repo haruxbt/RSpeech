@@ -209,7 +209,14 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     print("Accent audition passes draft to synthesis without saving, pauses playback and cancels before resume")
     let wordSource = FakeSafari()
     let wordDictionary = ReadingDictionary(defaults: preferences)
-    precondition(!wordDictionary.onlySpelling, "Collected words must be visible by default")
+    wordDictionary.checks = [
+        WordCheck(word: "UnknownTerm", reading: "エックス", isSpelling: true),
+        WordCheck(word: "Linux", reading: "リナックス", isSpelling: false),
+        WordCheck(word: "ARTEX", reading: "エエアアル", isSpelling: true)]
+    try wordDictionary.applyCommon(try JSONEncoder().encode(CommonDictionaryFile(schemaVersion: 1, version: "3.0", entries: [ReadingEntry(word: "artex", reading: "アルテックス")])), persist: false)
+    precondition(wordDictionary.pendingChecks.map(\.word) == ["UnknownTerm"], "Only unregistered spelling candidates should be shown")
+    try wordDictionary.importJSON(try JSONEncoder().encode([ReadingEntry(word: "unknownterm", reading: "アンノウンターム")]))
+    precondition(wordDictionary.pendingChecks.isEmpty, "Personal registrations must disappear from candidates immediately")
     let wordReader = Reader(safari: wordSource, muted: true, dictionary: wordDictionary, preferences: preferences, makeEngine: { FakeSpeech() })
     await wordSource.set("https://example.test/words", "ARTEXとLinux、APIを確認。", documentID: "words", selectionID: "start")
     wordReader.checkPageWords(); try await waitFor { !wordDictionary.checking }
@@ -232,7 +239,7 @@ final class FakeSpeech: SpeechEngine, @unchecked Sendable {
     precondition(wordDictionary.checks.isEmpty && wordDictionary.scanMessage.contains("fixture fetch failed"))
     let unusedWholePage = await wordSource.wholePageCalls; precondition(unusedWholePage == 0)
     wordReader.stop()
-    print("Word scan shares playback extraction/cache/selection, shows registered words, clears stale results and reports empty/error states")
+    print("Word scan shares playback extraction/cache/selection, filters registered/normally pronounced words, clears stale results and reports empty/error states")
     // Observe the actual AVAudioPlayer state when the next synthesis starts.
     let pipelineSource = FakeSafari()
     let first = "最初の文章を読みながら次の音声を準備するための確認です。"

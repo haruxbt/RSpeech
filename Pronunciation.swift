@@ -139,7 +139,10 @@ func englishWords(_ text: String) -> [String] {
     @Published var checks: [WordCheck] = []
     @Published var checking = false
     @Published var scanMessage = "現在のSafariページの英単語を調べられます。"
-    @Published var onlySpelling = false
+    var pendingChecks: [WordCheck] {
+        let registered = Set(effectiveEntries.map { $0.word.lowercased() })
+        return checks.filter { $0.isSpelling && !registered.contains($0.word.lowercased()) }
+    }
     private let defaults: UserDefaults
     private let key = "readingDictionaryV1"
     private var writable = true
@@ -305,7 +308,7 @@ struct DictionarySettingsView: View {
     var checkPage: () -> Void = {}
     var preview: () -> Void = {}
     var body: some View {
-        let registered = Dictionary(dictionary.effectiveEntries.map { ($0.word.lowercased(), $0) }, uniquingKeysWith: { _, new in new })
+        let candidates = Set(dictionary.pendingChecks.map(\.id))
         return VStack(alignment: .leading, spacing: 12) {
             TabView(selection: $dictionary.tab) {
                 VStack(alignment: .leading, spacing: 10) {
@@ -343,7 +346,6 @@ struct DictionarySettingsView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Button("現在のページの英単語を確認") { checkPage() }.disabled(dictionary.checking)
-                        Toggle("未登録の綴り読み候補のみ", isOn: $dictionary.onlySpelling).toggleStyle(.checkbox)
                         Spacer()
                     }
                     Text(dictionary.scanMessage).font(.callout).foregroundStyle(.secondary)
@@ -354,18 +356,15 @@ struct DictionarySettingsView: View {
                     }.font(.caption).foregroundStyle(.secondary)
                     ScrollView {
                         VStack(spacing: 8) {
-                            if dictionary.onlySpelling && !dictionary.checks.isEmpty && !dictionary.checks.contains(where: { $0.isSpelling && registered[$0.word.lowercased()] == nil }) {
-                                Text("絞り込みに一致する単語はありません。チェックを外すと取得した全単語を表示します。")
+                            if !dictionary.checking && !dictionary.checks.isEmpty && candidates.isEmpty {
+                                Text("未登録のアルファベット読み候補はありません。")
                                     .font(.callout).foregroundStyle(.secondary).padding(12)
                             }
                             ForEach($dictionary.checks) { $entry in
-                                if !dictionary.onlySpelling || (entry.isSpelling && registered[entry.word.lowercased()] == nil) {
+                                if candidates.contains(entry.id) {
                                     HStack {
                                         VStack(alignment: .leading) {
                                             Text(entry.word)
-                                            if let saved = registered[entry.word.lowercased()] {
-                                                Text("登録済み：\(saved.reading)").font(.caption2).foregroundStyle(.secondary)
-                                            }
                                         }.frame(width: 130, alignment: .leading)
                                         Text(entry.reading.isEmpty ? "読み取得なし" : entry.reading).font(.callout).frame(maxWidth: .infinity, alignment: .leading)
                                         TextField("読みを入力", text: $entry.desiredReading).accessibilityLabel("\(entry.word)の登録する読み").frame(width: 190)
