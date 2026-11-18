@@ -18,6 +18,8 @@ j=OpenJtalk(str(next((Path.home()/'Library/Application Support/RTranslate/Assets
 print(json.dumps({w:''.join(m.text for p in j.analyze(kana) for m in p.moras) for w,kana in json.loads(sys.stdin.read()).items()}))
 """
 normalized=json.loads(subprocess.check_output([str(r/'Python/bin/python3.13'),'-B','-c',normalize_code],input=json.dumps(dict(expected,override='シーバーストライクエーアイ')).encode(),timeout=30))
+# Test automatic splitting even after this example enters the common dictionary.
+rows=[row for row in rows if row['word'].lower()!='cyberstrikeai']
 whole=rows+[{'word':'CyberStrikeAI','reading':'サンプル','accent':2,'priority':7}]
 parts=[dict(x,reading='シーバー') if x['word'].lower()=='cyber' else x for x in rows]
 # Lowercase fallback is useful even when a part is not in the custom dictionary.

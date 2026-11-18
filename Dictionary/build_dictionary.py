@@ -14,6 +14,6 @@ for line in (here/'readings.tsv').read_text().splitlines():
  seen.add(word.casefold())
  found=[s['id'] for s in sources if word.lower() in s['words']]
  entries.append({'id':str(uuid.uuid5(uuid.NAMESPACE_URL,'https://github.com/haruxbt/RSpeech#'+word.lower())), 'word':word,'reading':reading,'accent':0,'priority':5,'sources':found or ['curated-it'],**overrides.get(word.lower(),{})})
-output={'schemaVersion':1,'version':'2026.11.18.1','description':'IT・プログラミング・AI開発・セキュリティの読み。読みは編集方針による日本語表記、アクセント0は平板の初期値。個人辞書が優先。','sources':[{k:s[k] for k in ['id','title','url','status']} for s in sources], 'entries':entries}
+output={'schemaVersion':1,'version':'2026.11.18.2','description':'IT・プログラミング・AI開発・セキュリティの読み。読みは編集方針による日本語表記、アクセント0は平板の初期値。個人辞書が優先。','sources':[{k:s[k] for k in ['id','title','url','status']} for s in sources], 'entries':entries}
 (here/'common-ja.json').write_text(json.dumps(output,ensure_ascii=False,indent=2)+'\n')
 print('Common entries:',len(entries),'with page occurrence:',sum(e['sources']!=['curated-it'] for e in entries))

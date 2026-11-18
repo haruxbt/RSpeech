@@ -70,5 +70,17 @@
   "goals": {
     "accent": 0,
     "priority": 5
+  },
+  "mythos": {
+    "accent": 1,
+    "priority": 5
+  },
+  "fusion": {
+    "accent": 1,
+    "priority": 5
+  },
+  "decision": {
+    "accent": 2,
+    "priority": 5
   }
 }

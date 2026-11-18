@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "2026.11.18.1",
+  "version": "2026.11.18.2",
   "description": "IT・プログラミング・AI開発・セキュリティの読み。読みは編集方針による日本語表記、アクセント0は平板の初期値。個人辞書が優先。",
   "sources": [
     {
@@ -5212,7 +5212,7 @@
     {
       "id": "b7924b76-672c-511c-ac74-e0ecd445eafd",
       "word": "Qwen",
-      "reading": "キューウェン",
+      "reading": "クウェン",
       "accent": 0,
       "priority": 5,
       "sources": [
@@ -8743,6 +8743,466 @@
       "priority": 5,
       "sources": [
         "curated-it"
+      ]
+    },
+    {
+      "id": "49cf0170-cf72-58f0-ae33-6f047768111e",
+      "word": "Top",
+      "reading": "トップ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "mcp"
+      ]
+    },
+    {
+      "id": "48b95576-76af-5dc1-bb20-01594ef4db3c",
+      "word": "Sign",
+      "reading": "サイン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "733100a8-0a5e-5a5b-bf18-a0c898e7008a",
+      "word": "Up",
+      "reading": "アップ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "87237af7-8892-528a-9c57-7d6be1520643",
+      "word": "Talos",
+      "reading": "タロス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "fae6b20d-98b5-520b-adcf-54a1c17efb80",
+      "word": "Mythos",
+      "reading": "ミュトス",
+      "accent": 1,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "02d92c31-7bed-5fea-9f47-bde4071c6568",
+      "word": "MiniMax",
+      "reading": "ミニマックス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "2b64bf28-d268-5203-a636-63f9537062b0",
+      "word": "Flash",
+      "reading": "フラッシュ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "926de890-2c92-5482-b9c5-2f820108f221",
+      "word": "Meta",
+      "reading": "メタ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "626902c9-55ba-525e-8ef9-271524eee25a",
+      "word": "Muse",
+      "reading": "ミューズ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "2a57eb39-4e9a-5186-be4c-400093bcc6f1",
+      "word": "Fusion",
+      "reading": "フュージョン",
+      "accent": 1,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "530bc736-47c4-5489-8a31-f7e791fb7877",
+      "word": "Decision",
+      "reading": "ディシジョン",
+      "accent": 2,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "e45d5dbb-5ba6-5b56-8e74-e205bfa2b6b3",
+      "word": "password",
+      "reading": "パスワード",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "4372fdf3-a7a0-5e27-88c9-ef4715c96270",
+      "word": "Resource",
+      "reading": "リソース",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "http"
+      ]
+    },
+    {
+      "id": "52fc71e8-8b42-5780-a0c3-bbe883f24917",
+      "word": "Cognito",
+      "reading": "コグニート",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "886c241a-3a2b-5535-835e-ef9f7e5cc003",
+      "word": "Alibaba",
+      "reading": "アリババ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "6198d400-a64e-5225-9e45-2e671242e4ef",
+      "word": "exe",
+      "reading": "エグゼ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "5292e023-756c-52b9-abe8-a3260a504622",
+      "word": "Vault",
+      "reading": "ボルト",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "c9e79702-3047-5b12-a529-d0cfe21e53a1",
+      "word": "Identity",
+      "reading": "アイデンティティー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "fb845e74-1ae1-5341-aa0d-682f58323b31",
+      "word": "Hub",
+      "reading": "ハブ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "7f6d2a3a-3355-52d3-8f12-db0207e6d6c7",
+      "word": "Censys",
+      "reading": "センシス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "c3eea021-2d87-5730-b167-ba86022f2cc7",
+      "word": "Shodan",
+      "reading": "ショーダン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "3d19e04c-8c20-5ccd-97c5-5c5034e25431",
+      "word": "CAPTCHA",
+      "reading": "キャプチャ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "51134e52-f805-5209-910f-7ee5776e66a1",
+      "word": "Telegram",
+      "reading": "テレグラム",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "f40e81ca-ea31-5272-8a3c-b897aa258550",
+      "word": "PentAGI",
+      "reading": "ペントエエジイアイ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "1852087a-ce76-53ee-8593-dcab74442558",
+      "word": "Infostealer",
+      "reading": "インフォスティーラー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "7fc79114-1e79-55bb-afe0-3921186086c3",
+      "word": "VShell",
+      "reading": "ブイシェル",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "11d30a03-ae00-5ff9-b4d2-2445b76c39c2",
+      "word": "GoPhish",
+      "reading": "ゴオフィッシュ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "8111b4de-0b42-58ed-a929-d61cc12ca5b7",
+      "word": "VAPOR",
+      "reading": "ベイパア",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "d8d2c0de-0690-5759-bf95-ce8dc8def3f0",
+      "word": "PANDA",
+      "reading": "パンダ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "8b09306b-5a5e-5d7e-9619-449a2dc4264e",
+      "word": "Graph",
+      "reading": "グラフ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "mcp"
+      ]
+    },
+    {
+      "id": "43c475b7-63ad-55e3-b7db-17608510a357",
+      "word": "Nessus",
+      "reading": "ネサス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "286d457c-9750-57c9-9c2c-af97f8c954cf",
+      "word": "Tenable",
+      "reading": "テナブル",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "bbdc35f3-2476-584e-acff-7a285398ce79",
+      "word": "Fscan",
+      "reading": "エフスキャン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "63102e66-e569-5626-9cbc-45da908febb6",
+      "word": "PIN",
+      "reading": "ピン",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "dd0328fa-45db-57ff-bd2f-e92b73998abc",
+      "word": "Snort",
+      "reading": "スノート",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "b38c2d2d-a4b5-50da-a6d1-a75cd9ec2678",
+      "word": "Downloader",
+      "reading": "ダウンローダー",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "593ed1e0-92a0-53a6-ab86-1536efd9996c",
+      "word": "CyberStrikeAI",
+      "reading": "サイバーストライクエーアイ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "bf6b5f47-cf80-5fcb-89f9-dfdb8dddb002",
+      "word": "AutoHunter",
+      "reading": "オートハンター",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "f77c3e29-0c41-5cbd-ac84-b90c291c77cc",
+      "word": "DeepAudit",
+      "reading": "ディープオーディット",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "70981df7-c301-5803-b6db-1bf8f30c2990",
+      "word": "Cortex",
+      "reading": "コーテックス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "bc756f21-85fb-5b77-ad2a-8f39142c30d9",
+      "word": "XSIAM",
+      "reading": "エックスサイアム",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "447cd0c1-0c2c-589b-9f0a-4d0082c8a1d2",
+      "word": "Unit",
+      "reading": "ユニット",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "d13a1deb-d297-50e7-a90c-980befb9e71d",
+      "word": "Incident",
+      "reading": "インシデント",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "7d60429e-4ed9-52da-8718-bf255ed099f6",
+      "word": "GenAI",
+      "reading": "ジェンエーアイ",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "ec84bab8-0182-5f6f-8d88-8629b95dc20c",
+      "word": "NAS",
+      "reading": "ナス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "curated-it"
+      ]
+    },
+    {
+      "id": "dd0457ae-e995-5890-adc8-7e20b232895e",
+      "word": "Opus",
+      "reading": "オーパス",
+      "accent": 0,
+      "priority": 5,
+      "sources": [
+        "agents"
       ]
     }
   ]

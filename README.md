@@ -45,7 +45,7 @@ CPUのように綴り読みで正しい単語もあるため、候補は誤読�
 
 [共通辞書JSON](Dictionary/common-ja.json)には、IT・プログラミング・AI・セキュリティ、ネットワークメーカー・製品名など789語の初期読みを用意しています。Intent / Planner / Write、put / get / read / write / post、Cisco / Catalyst / Palo Alto / Fortinet / Juniper / Arista / A10 / F5 / CrowdStrike / Zscaler / Infobloxなどを含みます。
 
-公開JSONは更新を継続しており、2026.11.18.1では863語です。Attack Surface / MITRE Att@ck / Tor / Dark Web / DoS / DDoSも含みます。
+公開JSONは更新を継続しており、2026.11.18.2では909語です。Attack Surface / MITRE Att@ck / Tor / Dark Web / DoS / DDoSも含みます。
 
 起動時にGitHubから公開JSONを確認し、検証してからこのMacへ保存します。通信に失敗したときは手元の共通辞書を使います。**同じ単語は個人辞書の登録を優先**するため、更新で自分の読みが上書きされません。
 
