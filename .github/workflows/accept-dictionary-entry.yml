@@ -1,0 +1,36 @@
+name: Accept owner dictionary entry
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+
+jobs:
+  add-entry:
+    if: github.repository == 'haruxbt/RSpeech' && github.event.issue.user.login == github.repository_owner && github.actor == github.repository_owner && github.event.issue.title == '[R辞書] 共有読み方の追加'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Validate and publish one entry
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python3 Dictionary/accept_submission.py "$GITHUB_EVENT_PATH"
+            python3 Dictionary/build_dictionary.py
+            git diff --check
+            git add -- Dictionary/readings.tsv Dictionary/common-ja.json Dictionary/pronunciation-overrides.json Dictionary/version.txt
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m 'Add owner-submitted shared pronunciation'
+            if git push origin HEAD:main; then exit 0; fi
+            sleep "$attempt"
+          done
+          exit 1
